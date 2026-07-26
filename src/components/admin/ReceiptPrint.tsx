@@ -23,7 +23,7 @@ export default function ReceiptPrint({
   nominal,
   admin,
 }: ReceiptPrintProps) {
-  const publicUrl = `https://erestribusi.lumajangkab.go.id/tagihan?id=${idPelanggan}`;
+  const publicUrl = `https://dev.dlh.lumajangkab.go.id/tagihan?id=${idPelanggan}`;
 
   return (
     <div className="bg-white p-8 max-w-md mx-auto border-2 border-dashed border-[var(--color-ink-900)] text-[var(--color-ink-900)] font-sans space-y-6">
