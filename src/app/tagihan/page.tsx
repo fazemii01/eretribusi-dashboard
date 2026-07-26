@@ -1,0 +1,345 @@
+'use client';
+
+import { useState } from 'react';
+import Navbar from '@/components/public/Navbar';
+import Footer from '@/components/public/Footer';
+import QrisModal from '@/components/public/QrisModal';
+import { Search, QrCode, Printer, Filter, PhoneCall, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+
+interface InvoiceItem {
+  invoice: string;
+  bulan: string;
+  nominal: number;
+  status: string;
+  qris_payload: string;
+}
+
+interface PelangganInfo {
+  id_pelanggan: string;
+  nama: string;
+  alamat: string;
+  rt: string;
+  rw: string;
+  kelurahan: string;
+  kecamatan: string;
+  va: number;
+}
+
+export default function TagihanPage() {
+  const [inputId, setInputId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [pelanggan, setPelanggan] = useState<PelangganInfo | null>(null);
+  const [tagihan, setTagihan] = useState<InvoiceItem[]>([]);
+  const [filterTahun, setFilterTahun] = useState('');
+  const [selectedQris, setSelectedQris] = useState<InvoiceItem | null>(null);
+  const [showPrintStatement, setShowPrintStatement] = useState(false);
+
+  const mockCekTagihan = (id: string) => {
+    if (!id.trim()) {
+      setErrorMsg('Silakan masukkan ID Wajib Retribusi terlebih dahulu');
+      return;
+    }
+    setLoading(true);
+    setErrorMsg('');
+
+    setTimeout(() => {
+      setPelanggan({
+        id_pelanggan: id.toUpperCase(),
+        nama: 'Budi Santoso',
+        alamat: 'Jl. Mawar No 10',
+        rt: '01',
+        rw: '01',
+        kelurahan: 'Jogoyudan',
+        kecamatan: 'Lumajang',
+        va: 900,
+      });
+
+      setTagihan([
+        {
+          invoice: `INV-2603-${id.toUpperCase()}`,
+          bulan: 'Maret 2026',
+          nominal: 15000,
+          status: 'Belum Lunas',
+          qris_payload: `00020101021226670016ID.GOV.DLH.LUMAJANG011893600914000000000002155204939953033605405150005802ID5912DLH LUMAJANG6008LUMAJANG61056731162190715INV-2603-${id.toUpperCase()}6304ABCD`,
+        },
+        {
+          invoice: `INV-2602-${id.toUpperCase()}`,
+          bulan: 'Februari 2026',
+          nominal: 15000,
+          status: 'Lunas',
+          qris_payload: `00020101021226670016ID.GOV.DLH.LUMAJANG011893600914000000000002155204939953033605405150005802ID5912DLH LUMAJANG6008LUMAJANG61056731162190715INV-2602-${id.toUpperCase()}6304ABCD`,
+        },
+      ]);
+      setLoading(false);
+    }, 600);
+  };
+
+  const handlePrintStatement = () => {
+    setShowPrintStatement(true);
+    setTimeout(() => {
+      window.print();
+    }, 200);
+  };
+
+  const yearsAvailable = ['2026', '2025'];
+  const filteredTagihan = tagihan.filter((item) =>
+    filterTahun ? item.bulan.includes(filterTahun) : true,
+  );
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[var(--color-ink-50)]">
+      <Navbar />
+
+      <main className="flex-1 py-12 max-w-4xl mx-auto px-4 sm:px-6 w-full">
+        {/* HEADER */}
+        <div className="text-center max-w-lg mx-auto mb-8 space-y-2">
+          <h1 className="text-3xl font-extrabold text-[var(--color-ink-900)] tracking-tight">
+            Lihat Tagihan Retribusi
+          </h1>
+          <p className="text-sm text-[var(--color-ink-500)]">
+            Masukkan ID Wajib Retribusi Anda (Contoh: <span className="font-mono-id text-[var(--color-brand-deep)]">JGY0101001</span>)
+          </p>
+        </div>
+
+        {/* SEARCH BOX */}
+        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[var(--color-ink-100)] shadow-sm max-w-xl mx-auto mb-10">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              mockCekTagihan(inputId);
+            }}
+            className="space-y-4"
+          >
+            <div>
+              <label className="block text-xs font-semibold text-[var(--color-ink-500)] uppercase tracking-wider mb-2">
+                ID Wajib Retribusi
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={inputId}
+                  onChange={(e) => setInputId(e.target.value)}
+                  placeholder="Ketik ID Wajib Retribusi..."
+                  className="w-full px-4 py-3.5 pl-11 rounded-xl border border-[var(--color-ink-300)] font-mono-id text-base text-[var(--color-ink-900)] uppercase focus:outline-none focus:border-[var(--color-brand-mid)] focus:ring-2 focus:ring-[var(--color-brand-wash)] transition-all bg-[var(--color-ink-50)]"
+                />
+                <Search className="w-5 h-5 text-[var(--color-ink-500)] absolute left-3.5 top-4" />
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-danger)] bg-[var(--color-danger-bg)] p-3 rounded-lg border border-[var(--color-danger)]/20">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 rounded-xl bg-[var(--color-brand-mid)] hover:bg-[var(--color-brand-deep)] text-white font-semibold text-sm transition-colors shadow-xs flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <span className="animate-pulse">Mencari Data...</span>
+              ) : (
+                <>
+                  <Search className="w-4 h-4" />
+                  Cari Tagihan Anda
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* RESULTS SECTION */}
+        {pelanggan && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Customer Details Card */}
+            <div className="bg-white p-6 rounded-2xl border border-[var(--color-ink-100)] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-semibold text-[var(--color-ink-500)] uppercase tracking-wider block">
+                  Data Wajib Retribusi
+                </span>
+                <h3 className="text-lg font-bold text-[var(--color-ink-900)] mt-0.5">{pelanggan.nama}</h3>
+                <p className="text-xs text-[var(--color-ink-700)] mt-1">
+                  {pelanggan.alamat} (RT {pelanggan.rt} / RW {pelanggan.rw}), Kel. {pelanggan.kelurahan}, Kec. {pelanggan.kecamatan}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="px-3 py-1 rounded-md bg-[var(--color-brand-wash)] text-[var(--color-brand-deep)] text-xs font-bold border border-[var(--color-brand-light)]/20 font-mono-id">
+                  {pelanggan.id_pelanggan}
+                </span>
+                <span className="px-3 py-1 rounded-md bg-[var(--color-ink-100)] text-[var(--color-ink-700)] text-xs font-semibold">
+                  {pelanggan.va} VA
+                </span>
+              </div>
+            </div>
+
+            {/* Table Header Filter & Print Actions */}
+            <div className="bg-white p-4 rounded-xl border border-[var(--color-ink-100)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-[var(--color-ink-500)]" />
+                <label className="text-xs font-semibold text-[var(--color-ink-700)]">Filter Tahun:</label>
+                <select
+                  value={filterTahun}
+                  onChange={(e) => setFilterTahun(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg border border-[var(--color-ink-300)] text-xs bg-[var(--color-ink-50)] text-[var(--color-ink-900)] focus:outline-none focus:border-[var(--color-brand-mid)] cursor-pointer"
+                >
+                  <option value="">Semua Tahun</option>
+                  {yearsAvailable.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                onClick={handlePrintStatement}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--color-ink-300)] text-xs font-semibold text-[var(--color-ink-700)] hover:bg-[var(--color-ink-50)] transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+                Cetak Tagihan
+              </button>
+            </div>
+
+            {/* Invoices Table */}
+            <div className="bg-white rounded-2xl border border-[var(--color-ink-100)] overflow-hidden shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead className="bg-[var(--color-ink-50)] text-[var(--color-ink-500)] text-xs uppercase tracking-wider font-semibold border-b border-[var(--color-ink-100)]">
+                    <tr>
+                      <th className="p-4 text-center">QRIS</th>
+                      <th className="p-4">Nama</th>
+                      <th className="p-4">Bulan / Tahun</th>
+                      <th className="p-4">Nominal</th>
+                      <th className="p-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-ink-100)] text-[var(--color-ink-700)]">
+                    {filteredTagihan.map((item, idx) => {
+                      const isLunas = item.status === 'Lunas';
+                      return (
+                        <tr key={idx} className="hover:bg-[var(--color-ink-50)] transition-colors">
+                          <td className="p-4 text-center">
+                            <button
+                              onClick={() => setSelectedQris(item)}
+                              title="Generate QRIS Dinamis"
+                              className="p-2 rounded-lg bg-[var(--color-brand-wash)] text-[var(--color-brand-mid)] hover:bg-[var(--color-brand-mid)] hover:text-white transition-colors"
+                            >
+                              <QrCode className="w-4 h-4" />
+                            </button>
+                          </td>
+                          <td className="p-4 font-bold text-[var(--color-ink-900)]">{pelanggan.nama}</td>
+                          <td className="p-4 font-medium">{item.bulan}</td>
+                          <td className="p-4 font-semibold">Rp {item.nominal.toLocaleString('id-ID')}</td>
+                          <td className="p-4 text-center">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                                isLunas
+                                  ? 'bg-[var(--color-success-bg)] text-[var(--color-success)] border border-[var(--color-success)]/20'
+                                  : 'bg-[var(--color-danger-bg)] text-[var(--color-danger)] border border-[var(--color-danger)]/20'
+                              }`}
+                            >
+                              {isLunas ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                              {item.status.toUpperCase()}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* BOTTOM HELP INFO */}
+        <div className="mt-12 bg-white p-6 rounded-2xl border border-[var(--color-ink-100)] flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-brand-wash)] text-[var(--color-brand-mid)] flex items-center justify-center shrink-0">
+            <PhoneCall className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-bold text-[var(--color-ink-900)]">Tidak Tahu ID Wajib Retribusi Anda?</h4>
+            <p className="text-xs text-[var(--color-ink-500)] mt-0.5">
+              Hubungi CS Dini (<span className="font-semibold text-[var(--color-ink-900)]">0812-3456-7890</span>) dengan menyertakan Nama lengkap, Kelurahan/Desa, Kecamatan, RT, dan RW.
+            </p>
+          </div>
+        </div>
+      </main>
+
+      {/* QRIS DYNAMIC MODAL */}
+      {selectedQris && (
+        <QrisModal
+          invoiceId={selectedQris.invoice}
+          nominal={selectedQris.nominal}
+          qrisPayload={selectedQris.qris_payload}
+          onClose={() => setSelectedQris(null)}
+        />
+      )}
+
+      {/* PRINTABLE BILLING STATEMENT */}
+      {showPrintStatement && pelanggan && (
+        <div className="printable-receipt-area hidden">
+          <div className="max-w-xl mx-auto p-8 border-2 border-slate-800 bg-white font-sans text-slate-800 space-y-6">
+            <div className="text-center border-b-2 border-slate-800 pb-4 space-y-1">
+              <h2 className="text-xl font-extrabold uppercase tracking-wide">Dinas Lingkungan Hidup</h2>
+              <p className="text-sm font-semibold uppercase">Kabupaten Lumajang</p>
+              <p className="text-xs text-slate-500">Rincian Lembar Tagihan Retribusi Sampah</p>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between py-1 border-b border-slate-200">
+                <span className="text-slate-500">ID Wajib Retribusi:</span>
+                <span className="font-mono-id font-bold">{pelanggan.id_pelanggan}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200">
+                <span className="text-slate-500">Nama Pelanggan:</span>
+                <span className="font-bold">{pelanggan.nama}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200">
+                <span className="text-slate-500">Alamat:</span>
+                <span>{pelanggan.alamat} (RT {pelanggan.rt} / RW {pelanggan.rw})</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-slate-200">
+                <span className="text-slate-500">Kelurahan / Kecamatan:</span>
+                <span>Kel. {pelanggan.kelurahan}, Kec. {pelanggan.kecamatan}</span>
+              </div>
+            </div>
+
+            <table className="w-full text-xs text-left border-collapse border border-slate-300">
+              <thead className="bg-slate-100 font-semibold border-b border-slate-300">
+                <tr>
+                  <th className="p-2 border-r border-slate-300">Bulan</th>
+                  <th className="p-2 border-r border-slate-300">Nominal</th>
+                  <th className="p-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTagihan.map((inv, i) => (
+                  <tr key={i} className="border-b border-slate-200">
+                    <td className="p-2 border-r border-slate-300 font-medium">{inv.bulan}</td>
+                    <td className="p-2 border-r border-slate-300 font-semibold">Rp {inv.nominal.toLocaleString('id-ID')}</td>
+                    <td className="p-2 font-bold uppercase">{inv.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="pt-4 flex flex-col items-center justify-center space-y-2 text-center border-t border-slate-300">
+              <QRCodeSVG value={`https://erestribusi.lumajangkab.go.id/tagihan?id=${pelanggan.id_pelanggan}`} size={100} level="M" />
+              <p className="text-[10px] text-slate-500 max-w-xs">
+                Scan QR untuk cek status tagihan online resmi Dinas Lingkungan Hidup Kabupaten Lumajang.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer />
+    </div>
+  );
+}

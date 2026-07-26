@@ -1,26 +1,102 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* --- BRAND CORE --- */
+  --color-brand-deep: #0A4A42;
+  --color-brand-mid: #0D6B5F;
+  --color-brand-light: #14957F;
+  --color-brand-wash: #E8F5F2;
+  --color-brand-tint: #F0FAF8;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* --- NEUTRALS --- */
+  --color-ink-900: #0F1923;
+  --color-ink-700: #2C3E4A;
+  --color-ink-500: #6B7C8A;
+  --color-ink-300: #B4C0C8;
+  --color-ink-100: #EDF1F3;
+  --color-ink-50: #F7F9FA;
+  --color-white: #FFFFFF;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* --- SEMANTIC --- */
+  --color-success: #1A7F5A;
+  --color-success-bg: #E8F5EF;
+  --color-danger: #C0392B;
+  --color-danger-bg: #FCEAEA;
+  --color-warning: #D4860A;
+  --color-warning-bg: #FEF3E2;
+  --color-info: #1A5FAA;
+  --color-info-bg: #E8F0FA;
+
+  /* --- ADMIN SHELL --- */
+  --color-sidebar-bg: #0F1923;
+  --color-sidebar-border: #1E2D3A;
+  --color-sidebar-text: #8FA3B1;
+  --color-sidebar-active-bg: #0D6B5F;
+  --color-sidebar-active-text: #FFFFFF;
+
+  --background: var(--color-ink-50);
+  --foreground: var(--color-ink-900);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-jakarta), sans-serif;
+}
+
+.font-mono-id {
+  font-family: var(--font-jetbrains-mono), monospace;
+  letter-spacing: 0.08em;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* --- PRINT STYLES FOR KUITANSI & LAPORAN --- */
+@media print {
+  /* Hide all UI elements (Sidebar, Nav, Buttons, Cards) */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Only show the element with class .printable-receipt-area */
+  .printable-receipt-area,
+  .printable-receipt-area * {
+    visibility: visible !important;
+  }
+
+  .printable-receipt-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    background: white !important;
+    display: block !important;
+    z-index: 99999 !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 10mm;
+  }
 }
