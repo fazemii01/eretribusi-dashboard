@@ -1,35 +1,64 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StatCard from '@/components/admin/StatCard';
-import { DollarSign, TrendingDown, Users, Star, Calendar, CheckCircle2 } from 'lucide-react';
+import { DollarSign, TrendingDown, Users, Star, Calendar } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+import { API_BASE_URL } from '@/lib/api';
 
 export default function DashboardStatistik() {
   const [selectedYear, setSelectedYear] = useState('2026');
+  const [loading, setLoading] = useState(false);
 
-  const chartData = [
-    { bulan: 'Jan', lunas: 15000000, tunggakan: 2500000 },
-    { bulan: 'Feb', lunas: 16200000, tunggakan: 1800000 },
-    { bulan: 'Mar', lunas: 18000000, tunggakan: 1200000 },
-    { bulan: 'Apr', lunas: 17500000, tunggakan: 1500000 },
-    { bulan: 'Mei', lunas: 19000000, tunggakan: 900000 },
-    { bulan: 'Jun', lunas: 21000000, tunggakan: 800000 },
-    { bulan: 'Jul', lunas: 20500000, tunggakan: 1100000 },
-    { bulan: 'Agu', lunas: 22000000, tunggakan: 600000 },
-    { bulan: 'Sep', lunas: 21500000, tunggakan: 750000 },
-    { bulan: 'Okt', lunas: 23000000, tunggakan: 500000 },
-    { bulan: 'Nov', lunas: 22500000, tunggakan: 600000 },
-    { bulan: 'Des', lunas: 24000000, tunggakan: 400000 },
-  ];
+  const [statsData, setStatsData] = useState({
+    totalLunas: 240200000,
+    totalTunggakan: 12450000,
+    totalPelanggan: 1050,
+    kepatuhan: 95,
+    chartData: [
+      { bulan: 'Jan', lunas: 15000000, tunggakan: 2500000 },
+      { bulan: 'Feb', lunas: 16200000, tunggakan: 1800000 },
+      { bulan: 'Mar', lunas: 18000000, tunggakan: 1200000 },
+      { bulan: 'Apr', lunas: 17500000, tunggakan: 1500000 },
+      { bulan: 'Mei', lunas: 19000000, tunggakan: 900000 },
+      { bulan: 'Jun', lunas: 21000000, tunggakan: 800000 },
+      { bulan: 'Jul', lunas: 20500000, tunggakan: 1100000 },
+      { bulan: 'Agu', lunas: 22000000, tunggakan: 600000 },
+      { bulan: 'Sep', lunas: 21500000, tunggakan: 750000 },
+      { bulan: 'Okt', lunas: 23000000, tunggakan: 500000 },
+      { bulan: 'Nov', lunas: 22500000, tunggakan: 600000 },
+      { bulan: 'Des', lunas: 24000000, tunggakan: 400000 },
+    ],
+    recentPayments: [
+      { waktu: '14:20:05', nama: 'Budi Santoso', bulan: 'Maret 2026', nominal: 15000, admin: 'Admin DLH' },
+      { waktu: '13:45:12', nama: 'Siti Aminah', bulan: 'Maret 2026', nominal: 25000, admin: 'Admin DLH' },
+      { waktu: '11:10:44', nama: 'Agus Setiawan', bulan: 'Maret 2026', nominal: 15000, admin: 'Petugas Loket' },
+      { waktu: '09:30:18', nama: 'Rina Wijaya', bulan: 'Februari 2026', nominal: 35000, admin: 'Admin DLH' },
+      { waktu: '08:15:00', nama: 'Eko Prasetyo', bulan: 'Maret 2026', nominal: 15000, admin: 'Petugas Loket' },
+    ],
+  });
 
-  const recentPayments = [
-    { waktu: '14:20:05', nama: 'Budi Santoso', bulan: 'Maret 2026', nominal: 15000, admin: 'Admin DLH' },
-    { waktu: '13:45:12', nama: 'Siti Aminah', bulan: 'Maret 2026', nominal: 25000, admin: 'Admin DLH' },
-    { waktu: '11:10:44', nama: 'Agus Setiawan', bulan: 'Maret 2026', nominal: 15000, admin: 'Petugas Loket' },
-    { waktu: '09:30:18', nama: 'Rina Wijaya', bulan: 'Februari 2026', nominal: 35000, admin: 'Admin DLH' },
-    { waktu: '08:15:00', nama: 'Eko Prasetyo', bulan: 'Maret 2026', nominal: 15000, admin: 'Petugas Loket' },
-  ];
+  useEffect(() => {
+    async function fetchStats() {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/tagihan/stats?tahun=${selectedYear}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.chartData) {
+            setStatsData(data);
+          }
+        }
+      } catch (err) {
+        // Fallback to default mock stats if backend server isn't running locally yet
+        console.log('Using default dashboard statistics mock data');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchStats();
+  }, [selectedYear]);
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -62,10 +91,30 @@ export default function DashboardStatistik() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <StatCard title="Pendapatan Lunas" value="Rp 240.200.000" icon={DollarSign} accentColor="border-t-[var(--color-success)]" />
-        <StatCard title="Total Tunggakan" value="Rp 12.450.000" icon={TrendingDown} accentColor="border-t-[var(--color-danger)]" />
-        <StatCard title="Pelanggan Aktif" value="1.248 KK" icon={Users} accentColor="border-t-[var(--color-info)]" />
-        <StatCard title="Kepatuhan Bayar" value="95%" icon={Star} accentColor="border-t-[var(--color-warning)]" />
+        <StatCard
+          title="Pendapatan Lunas"
+          value={`Rp ${statsData.totalLunas.toLocaleString('id-ID')}`}
+          icon={DollarSign}
+          accentColor="border-t-[var(--color-success)]"
+        />
+        <StatCard
+          title="Total Tunggakan"
+          value={`Rp ${statsData.totalTunggakan.toLocaleString('id-ID')}`}
+          icon={TrendingDown}
+          accentColor="border-t-[var(--color-danger)]"
+        />
+        <StatCard
+          title="Pelanggan Aktif"
+          value={`${statsData.totalPelanggan.toLocaleString('id-ID')} KK`}
+          icon={Users}
+          accentColor="border-t-[var(--color-info)]"
+        />
+        <StatCard
+          title="Kepatuhan Bayar"
+          value={`${statsData.kepatuhan}%`}
+          icon={Star}
+          accentColor="border-t-[var(--color-warning)]"
+        />
       </div>
 
       {/* Recharts Area Chart */}
@@ -76,7 +125,7 @@ export default function DashboardStatistik() {
 
         <div className="h-80 w-full pt-4">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <AreaChart data={statsData.chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorLunas" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--color-brand-mid)" stopOpacity={0.3} />
@@ -93,7 +142,7 @@ export default function DashboardStatistik() {
                 stroke="#64748B"
                 fontSize={12}
                 tickLine={false}
-                tickFormatter={(v) => `Rp ${v / 1000000}M`}
+                tickFormatter={(v) => `Rp ${(v / 1000000).toFixed(0)}M`}
               />
               <Tooltip
                 formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, '']}
@@ -121,7 +170,7 @@ export default function DashboardStatistik() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-ink-100)] text-[var(--color-ink-700)]">
-              {recentPayments.map((p, idx) => (
+              {statsData.recentPayments.map((p, idx) => (
                 <tr key={idx} className="hover:bg-[var(--color-ink-50)] transition-colors">
                   <td className="p-4 font-mono text-xs">{p.waktu}</td>
                   <td className="p-4 font-bold text-[var(--color-ink-900)]">{p.nama}</td>
