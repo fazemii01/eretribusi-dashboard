@@ -60,19 +60,19 @@ export default function TagihanAdminPage() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [invoices, setInvoices] = useState<InvoiceRow[]>([
-    { idInvoice: 'INV-2601-JGY0101001', idPelanggan: 'JGY0101001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Januari 2026', nominal: 15000, status: 'Lunas', penerima: 'Admin DLH' },
-    { idInvoice: 'INV-2602-JGY0101001', idPelanggan: 'JGY0101001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Februari 2026', nominal: 15000, status: 'Lunas', penerima: 'Admin DLH' },
-    { idInvoice: 'INV-2603-JGY0101001', idPelanggan: 'JGY0101001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Maret 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2604-JGY0101001', idPelanggan: 'JGY0101001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'April 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2605-JGY0101001', idPelanggan: 'JGY0101001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Mei 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2606-JGY0101001', idPelanggan: 'JGY0101001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Juni 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
+    { idInvoice: 'INV-2601-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Januari 2026', nominal: 15000, status: 'Lunas', penerima: 'Admin DLH' },
+    { idInvoice: 'INV-2602-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Februari 2026', nominal: 15000, status: 'Lunas', penerima: 'Admin DLH' },
+    { idInvoice: 'INV-2603-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Maret 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
+    { idInvoice: 'INV-2604-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'April 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
+    { idInvoice: 'INV-2605-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Mei 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
+    { idInvoice: 'INV-2606-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Juni 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
 
-    { idInvoice: 'INV-2607-JGT0203002', idPelanggan: 'JGT0203002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: '2026', bulan: 'Juli 2026', nominal: 25000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2608-JGT0203002', idPelanggan: 'JGT0203002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: '2026', bulan: 'Agustus 2026', nominal: 25000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2609-JGT0203002', idPelanggan: 'JGT0203002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: '2026', bulan: 'September 2026', nominal: 25000, status: 'Lunas', penerima: 'Bank SNAP Gateway' },
-    { idInvoice: 'INV-2610-RGT0102003', idPelanggan: 'RGT0102003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: '2026', bulan: 'Oktober 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2611-RGT0102003', idPelanggan: 'RGT0102003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: '2026', bulan: 'November 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2612-RGT0102003', idPelanggan: 'RGT0102003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: '2026', bulan: 'Desember 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
+    { idInvoice: 'INV-2607-LMJ-JGT-0002', idPelanggan: 'LMJ-JGT-0002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: '2026', bulan: 'Juli 2026', nominal: 25000, status: 'Belum Lunas', penerima: '-' },
+    { idInvoice: 'INV-2608-LMJ-JGT-0002', idPelanggan: 'LMJ-JGT-0002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: '2026', bulan: 'Agustus 2026', nominal: 25000, status: 'Belum Lunas', penerima: '-' },
+    { idInvoice: 'INV-2609-LMJ-JGT-0002', idPelanggan: 'LMJ-JGT-0002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: '2026', bulan: 'September 2026', nominal: 25000, status: 'Lunas', penerima: 'Bank SNAP Gateway' },
+    { idInvoice: 'INV-2610-LMJ-RGT-0003', idPelanggan: 'LMJ-RGT-0003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: '2026', bulan: 'Oktober 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
+    { idInvoice: 'INV-2611-LMJ-RGT-0003', idPelanggan: 'LMJ-RGT-0003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: '2026', bulan: 'November 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
+    { idInvoice: 'INV-2612-LMJ-RGT-0003', idPelanggan: 'LMJ-RGT-0003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: '2026', bulan: 'Desember 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
   ]);
 
   const filteredInvoices = useMemo(() => {

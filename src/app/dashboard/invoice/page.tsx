@@ -26,9 +26,9 @@ export default function InvoiceReceiptPage() {
 
   const mockReceipts: ReceiptRow[] = [
     {
-      idKuitansi: 'PAY-INV-2602-JGY0101001',
-      idInvoice: 'INV-2602-JGY0101001',
-      idPelanggan: 'JGY0101001',
+      idKuitansi: 'PAY-INV-2602-LMJ-JGY-0001',
+      idInvoice: 'INV-2602-LMJ-JGY-0001',
+      idPelanggan: 'LMJ-JGY-0001',
       nama: 'Budi Santoso',
       alamat: 'Jl. Mawar No 10 (RT 01 / RW 01)',
       waktuBayar: '14:20:05 15/02/2026',
@@ -39,9 +39,9 @@ export default function InvoiceReceiptPage() {
       kanal: 'Loket Tunai DLH',
     },
     {
-      idKuitansi: 'PAY-INV-2603-JGT0203002',
-      idInvoice: 'INV-2603-JGT0203002',
-      idPelanggan: 'JGT0203002',
+      idKuitansi: 'PAY-INV-2603-LMJ-JGT-0002',
+      idInvoice: 'INV-2603-LMJ-JGT-0002',
+      idPelanggan: 'LMJ-JGT-0002',
       nama: 'Siti Aminah',
       alamat: 'Jl. Melati No 4 (RT 03 / RW 02)',
       waktuBayar: '09:12:40 02/03/2026',
@@ -52,9 +52,9 @@ export default function InvoiceReceiptPage() {
       kanal: 'Bank Jatim QRIS',
     },
     {
-      idKuitansi: 'PAY-INV-2603-CTR0401004',
-      idInvoice: 'INV-2603-CTR0401004',
-      idPelanggan: 'CTR0401004',
+      idKuitansi: 'PAY-INV-2603-LMJ-CTR-0001',
+      idInvoice: 'INV-2603-LMJ-CTR-0001',
+      idPelanggan: 'LMJ-CTR-0001',
       nama: 'Rina Wijaya',
       alamat: 'Jl. Anggrek No 8 (RT 01 / RW 04)',
       waktuBayar: '11:45:12 10/03/2026',
@@ -65,9 +65,9 @@ export default function InvoiceReceiptPage() {
       kanal: 'Gopay QRIS',
     },
     {
-      idKuitansi: 'PAY-INV-2601-JGY0101001',
-      idInvoice: 'INV-2601-JGY0101001',
-      idPelanggan: 'JGY0101001',
+      idKuitansi: 'PAY-INV-2601-LMJ-JGY-0001',
+      idInvoice: 'INV-2601-LMJ-JGY-0001',
+      idPelanggan: 'LMJ-JGY-0001',
       nama: 'Budi Santoso',
       alamat: 'Jl. Mawar No 10 (RT 01 / RW 01)',
       waktuBayar: '10:05:30 18/01/2026',

@@ -39,6 +39,12 @@ export default function PelangganPage() {
 
   // Generate 1,050 Data Pelanggan for all 7 Kelurahan
   const allPelanggan = useMemo(() => {
+    const staticData = [
+      { id: 'LMJ-JGY-0001', nama: 'Budi Santoso', rt: '01', rw: '01', kelurahan: 'Jogoyudan', kecamatan: 'Lumajang', va: 900, noHp: '628123456789', alamat: 'Jl. Mawar No 10' },
+      { id: 'LMJ-JGT-0002', nama: 'Siti Aminah', rt: '03', rw: '02', kelurahan: 'Jogotrunan', kecamatan: 'Lumajang', va: 1300, noHp: '628198765432', alamat: 'Jl. Melati No 4' },
+      { id: 'LMJ-RGT-0003', nama: 'Agus Setiawan', rt: '02', rw: '01', kelurahan: 'Rogotrunan', kecamatan: 'Lumajang', va: 450, noHp: '628134567890', alamat: 'Jl. Dahlia No 12' },
+      { id: 'LMJ-CTR-0001', nama: 'Rina Wijaya', rt: '01', rw: '04', kelurahan: 'Citrodiwangsan', kecamatan: 'Lumajang', va: 2200, noHp: '628176543210', alamat: 'Jl. Anggrek No 8' },
+    ];
     const kelMap = [
       { kode: 'JGY', nama: 'Jogoyudan', street: 'Jl. Mawar' },
       { kode: 'JGT', nama: 'Jogotrunan', street: 'Jl. Melati' },
