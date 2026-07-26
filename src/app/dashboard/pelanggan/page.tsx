@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Download, Printer, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 
 interface Pelanggan {
   id: string;
@@ -62,17 +63,18 @@ export default function PelangganPage() {
     let seq = 1;
 
     for (const kel of kelMap) {
+      let kelSeq = 1;
       for (let rw = 1; rw <= 5; rw++) {
         for (let rt = 1; rt <= 6; rt++) {
           for (let count = 1; count <= 5; count++) {
             const rtStr = rt.toString().padStart(2, '0');
             const rwStr = rw.toString().padStart(2, '0');
-            const seqStr = seq.toString().padStart(3, '0');
+            const seqStr = ('000' + kelSeq).slice(-4);
             const fn = sampleFirstNames[(seq * 3) % sampleFirstNames.length];
             const ln = sampleLastNames[(seq * 7) % sampleLastNames.length];
 
             list.push({
-              id: `${kel.kode}${rwStr}${rtStr}${seqStr}`,
+              id: `LMJ-${kel.kode}-${seqStr}`,
               nama: `${fn} ${ln}`,
               alamat: `${kel.street} No. ${count * 3}`,
               rt: rtStr,
@@ -80,9 +82,10 @@ export default function PelangganPage() {
               kelurahan: kel.nama,
               kecamatan: 'Lumajang',
               va: vaOptions[seq % vaOptions.length],
-              noHp: `62812${(1000000 + seq * 17).toString()}`,
+              noHp: `6281234${seq.toString().padStart(5, '0')}`,
             });
             seq++;
+            kelSeq++;
           }
         }
       }
@@ -90,8 +93,41 @@ export default function PelangganPage() {
     return list;
   }, []);
 
+  const [livePelanggan, setLivePelanggan] = useState<Pelanggan[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/pelanggan`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setLivePelanggan(
+              data.map((p: any) => ({
+                id: p.id_pelanggan,
+                nama: p.nama,
+                alamat: p.alamat,
+                rt: p.rt || '01',
+                rw: p.rw || '01',
+                kelurahan: p.kelurahan,
+                kecamatan: p.kecamatan,
+                va: p.va,
+                noHp: p.no_hp,
+              })),
+            );
+          }
+        }
+      } catch (err) {
+        console.log('Using local fallback customer records');
+      }
+    }
+    loadData();
+  }, []);
+
+  const displayData = livePelanggan.length > 0 ? livePelanggan : allPelanggan;
+
   const filteredData = useMemo(() => {
-    return allPelanggan.filter((item) => {
+    return displayData.filter((item) => {
       const matchSearch =
         search === '' ||
         item.nama.toLowerCase().includes(search.toLowerCase()) ||
@@ -101,7 +137,7 @@ export default function PelangganPage() {
       const matchVa = filterVa === '' || item.va.toString() === filterVa;
       return matchSearch && matchKel && matchKec && matchVa;
     });
-  }, [allPelanggan, search, filterKel, filterKec, filterVa]);
+  }, [displayData, search, filterKel, filterKec, filterVa]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = useMemo(() => {
