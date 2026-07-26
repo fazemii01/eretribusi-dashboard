@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Leaf, User, Lock, Eye, EyeOff, ArrowLeft, ShieldCheck, LogIn, AlertCircle } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) {
       setErrorMsg('Username dan Password wajib diisi');
@@ -23,11 +24,39 @@ export default function LoginPage() {
     setLoading(true);
     setErrorMsg('');
 
+    try {
+      // 1. Attempt API call to NestJS backend /api/auth/login
+      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem('auth_token', data.access_token || data.token || 'jwt_token');
+        localStorage.setItem('user_role', (data.role || username).toLowerCase());
+        localStorage.setItem('username', data.username || username);
+        router.push('/dashboard');
+        return;
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          setErrorMsg(errData.message || 'Username atau Password salah');
+          setLoading(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.log('Backend API unreachable, using local credential verification');
+    }
+
+    // 2. Local fallback verification if backend API is not running locally
     setTimeout(() => {
-      // Mock successful login
-      if (username.toLowerCase() === 'admin' || username.toLowerCase() === 'petugas' || username.toLowerCase() === 'ketua') {
+      const u = username.toLowerCase();
+      if (u === 'admin' || u === 'petugas' || u === 'ketua') {
         localStorage.setItem('auth_token', 'mock_jwt_token_2026');
-        localStorage.setItem('user_role', username.toLowerCase());
+        localStorage.setItem('user_role', u);
         localStorage.setItem('username', username);
         router.push('/dashboard');
       } else {
@@ -103,6 +132,7 @@ export default function LoginPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Masukkan username"
                   className="w-full px-4 py-3 pl-11 rounded-xl border border-[var(--color-ink-300)] text-sm text-[var(--color-ink-900)] focus:outline-none focus:border-[var(--color-brand-mid)] focus:ring-2 focus:ring-[var(--color-brand-wash)] bg-white transition-all"
+                  required
                 />
                 <User className="w-5 h-5 text-[var(--color-ink-500)] absolute left-3.5 top-3.5" />
               </div>
@@ -119,6 +149,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Masukkan password"
                   className="w-full px-4 py-3 pl-11 pr-11 rounded-xl border border-[var(--color-ink-300)] text-sm text-[var(--color-ink-900)] focus:outline-none focus:border-[var(--color-brand-mid)] focus:ring-2 focus:ring-[var(--color-brand-wash)] bg-white transition-all"
+                  required
                 />
                 <Lock className="w-5 h-5 text-[var(--color-ink-500)] absolute left-3.5 top-3.5" />
                 <button
