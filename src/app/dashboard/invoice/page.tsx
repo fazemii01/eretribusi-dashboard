@@ -197,7 +197,7 @@ export default function InvoiceReceiptPage() {
       {/* Data Table */}
       <div className="bg-white rounded-2xl border border-[var(--color-ink-100)] overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse">
+          <table className="min-w-full text-sm text-left border-collapse whitespace-nowrap">
             <thead className="bg-[var(--color-ink-50)] text-[var(--color-ink-500)] text-xs uppercase tracking-wider font-semibold border-b border-[var(--color-ink-100)]">
               <tr>
                 <th className="p-4">No. Kuitansi</th>

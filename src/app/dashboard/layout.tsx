@@ -29,9 +29,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen flex bg-[var(--color-ink-50)] text-[var(--color-ink-900)]">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[var(--color-ink-50)] text-[var(--color-ink-900)]">
       <Sidebar />
-      <main className="flex-1 p-6 lg:p-8 overflow-y-auto max-h-screen">
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto lg:max-h-screen">
         {children}
       </main>
     </div>

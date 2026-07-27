@@ -118,14 +118,14 @@ export default function DashboardStatistik() {
       </div>
 
       {/* Recharts Area Chart */}
-      <div className="bg-white p-6 rounded-2xl border border-[var(--color-ink-100)] shadow-xs space-y-4">
-        <h3 className="text-base font-bold text-[var(--color-ink-900)] flex items-center gap-2">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-[var(--color-ink-100)] shadow-xs space-y-4">
+        <h3 className="text-sm sm:text-base font-bold text-[var(--color-ink-900)] flex items-center gap-2">
           Grafik Penerimaan & Tunggakan Tahun {selectedYear}
         </h3>
 
-        <div className="h-80 w-full pt-4">
+        <div className="h-64 sm:h-80 w-full pt-2 sm:pt-4">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={statsData.chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <AreaChart data={statsData.chartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorLunas" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--color-brand-mid)" stopOpacity={0.3} />
@@ -137,12 +137,12 @@ export default function DashboardStatistik() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-              <XAxis dataKey="bulan" stroke="#64748B" fontSize={12} tickLine={false} />
+              <XAxis dataKey="bulan" stroke="#64748B" fontSize={11} tickLine={false} />
               <YAxis
                 stroke="#64748B"
-                fontSize={12}
+                fontSize={11}
                 tickLine={false}
-                tickFormatter={(v) => `Rp ${(v / 1000000).toFixed(0)}M`}
+                tickFormatter={(v) => `${(v / 1000000).toFixed(0)}M`}
               />
               <Tooltip
                 formatter={(value: any) => [`Rp ${Number(value).toLocaleString('id-ID')}`, '']}
@@ -155,28 +155,28 @@ export default function DashboardStatistik() {
       </div>
 
       {/* 5 Recent Payments */}
-      <div className="bg-white p-6 rounded-2xl border border-[var(--color-ink-100)] shadow-xs space-y-4">
-        <h3 className="text-base font-bold text-[var(--color-ink-900)]">5 Pelunasan Terakhir</h3>
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-[var(--color-ink-100)] shadow-xs space-y-4">
+        <h3 className="text-sm sm:text-base font-bold text-[var(--color-ink-900)]">5 Pelunasan Terakhir</h3>
 
-        <div className="overflow-x-auto rounded-xl border border-[var(--color-ink-100)]">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-[var(--color-ink-50)] text-[var(--color-ink-500)] text-xs uppercase tracking-wider font-semibold border-b border-[var(--color-ink-100)]">
+        <div className="overflow-x-auto rounded-xl border border-[var(--color-ink-100)] -mx-1 sm:mx-0">
+          <table className="min-w-full text-xs sm:text-sm text-left border-collapse whitespace-nowrap">
+            <thead className="bg-[var(--color-ink-50)] text-[var(--color-ink-500)] text-[10px] sm:text-xs uppercase tracking-wider font-semibold border-b border-[var(--color-ink-100)]">
               <tr>
-                <th className="p-4">Waktu</th>
-                <th className="p-4">Nama Pelanggan</th>
-                <th className="p-4">Bulan Tagihan</th>
-                <th className="p-4">Nominal</th>
-                <th className="p-4 text-right">Penerima</th>
+                <th className="p-3 sm:p-4">Waktu</th>
+                <th className="p-3 sm:p-4">Nama Pelanggan</th>
+                <th className="p-3 sm:p-4">Bulan Tagihan</th>
+                <th className="p-3 sm:p-4">Nominal</th>
+                <th className="p-3 sm:p-4 text-right">Penerima</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-ink-100)] text-[var(--color-ink-700)]">
               {statsData.recentPayments.map((p, idx) => (
                 <tr key={idx} className="hover:bg-[var(--color-ink-50)] transition-colors">
-                  <td className="p-4 font-mono text-xs">{p.waktu}</td>
-                  <td className="p-4 font-bold text-[var(--color-ink-900)]">{p.nama}</td>
-                  <td className="p-4">{p.bulan}</td>
-                  <td className="p-4 font-semibold text-[var(--color-brand-deep)]">Rp {p.nominal.toLocaleString('id-ID')}</td>
-                  <td className="p-4 text-right text-xs text-[var(--color-ink-500)]">{p.admin}</td>
+                  <td className="p-3 sm:p-4 font-mono text-[11px] sm:text-xs">{p.waktu}</td>
+                  <td className="p-3 sm:p-4 font-bold text-[var(--color-ink-900)]">{p.nama}</td>
+                  <td className="p-3 sm:p-4">{p.bulan}</td>
+                  <td className="p-3 sm:p-4 font-semibold text-[var(--color-brand-deep)]">Rp {p.nominal.toLocaleString('id-ID')}</td>
+                  <td className="p-3 sm:p-4 text-right text-[11px] sm:text-xs text-[var(--color-ink-500)]">{p.admin}</td>
                 </tr>
               ))}
             </tbody>
