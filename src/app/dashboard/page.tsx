@@ -7,11 +7,34 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 import { API_BASE_URL } from '@/lib/api';
 
+interface ChartItem {
+  bulan: string;
+  lunas: number;
+  tunggakan: number;
+}
+
+interface RecentPayment {
+  waktu: string;
+  nama: string;
+  bulan: string;
+  nominal: number;
+  admin: string;
+}
+
+interface StatsState {
+  totalLunas: number;
+  totalTunggakan: number;
+  totalPelanggan: number;
+  kepatuhan: number;
+  chartData: ChartItem[];
+  recentPayments: RecentPayment[];
+}
+
 export default function DashboardStatistik() {
   const [selectedYear, setSelectedYear] = useState('2026');
   const [loading, setLoading] = useState(false);
 
-  const [statsData, setStatsData] = useState({
+  const [statsData, setStatsData] = useState<StatsState>({
     totalLunas: 0,
     totalTunggakan: 0,
     totalPelanggan: 0,
