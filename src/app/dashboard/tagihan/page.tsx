@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import ReceiptPrint from '@/components/admin/ReceiptPrint';
 import { Search, Printer, DollarSign, CheckCircle2, XCircle, X, Zap, QrCode, CreditCard, User, Calendar, MapPin, Layers } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { API_BASE_URL } from '@/lib/api';
 
 interface InvoiceRow {
   idInvoice: string;

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ReceiptPrint from '@/components/admin/ReceiptPrint';
 import { Search, Printer, Download, FileCheck, CheckCircle2, Calendar, User, CreditCard } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
 
 interface ReceiptRow {
   idKuitansi: string;

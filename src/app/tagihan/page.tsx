@@ -6,6 +6,7 @@ import Footer from '@/components/public/Footer';
 import QrisModal from '@/components/public/QrisModal';
 import { Search, QrCode, Printer, Filter, PhoneCall, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { API_BASE_URL } from '@/lib/api';
 
 interface InvoiceItem {
   invoice: string;
