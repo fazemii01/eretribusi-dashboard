@@ -23,15 +23,37 @@ export default function ReceiptPrint({
   nominal,
   admin,
 }: ReceiptPrintProps) {
-  const publicUrl = `https://dev.dlh.lumajangkab.go.id/tagihan?id=${idPelanggan}`;
+  const publicUrl = `https://erestribusi.lumajangkab.go.id/tagihan?id=${idPelanggan}&invoice=${invoiceId}`;
 
   return (
     <div className="bg-white p-8 max-w-md mx-auto border-2 border-dashed border-[var(--color-ink-900)] text-[var(--color-ink-900)] font-sans space-y-6">
-      {/* Letterhead */}
-      <div className="text-center border-b-2 border-[var(--color-ink-900)] pb-4 space-y-1">
-        <h2 className="text-lg font-bold uppercase tracking-wide">Dinas Lingkungan Hidup</h2>
-        <p className="text-xs font-semibold uppercase">Kabupaten Lumajang</p>
-        <p className="text-[10px] text-[var(--color-ink-500)]">Tanda Bukti Pembayaran Retribusi Sampah</p>
+      {/* Official Government Kop Surat */}
+      <div className="border-b-4 border-double border-[var(--color-ink-900)] pb-4">
+        <div className="flex items-center gap-3">
+          <img
+            src="/logo-dlh.png"
+            alt="Logo Pemkab Lumajang"
+            className="w-16 h-16 object-contain flex-shrink-0"
+            onError={(e) => {
+              // Fallback if image fails
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+          <div className="text-center flex-1 space-y-0.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider">Pemerintah Kabupaten Lumajang</h3>
+            <h2 className="text-sm font-extrabold uppercase tracking-wide">Dinas Lingkungan Hidup</h2>
+            <p className="text-[10px] leading-tight text-gray-600">
+              Jalan Alun-alun Utara Nomor 7, Lumajang, Jawa Timur 67316
+            </p>
+            <p className="text-[10px] leading-tight text-gray-600">
+              Telepon (0334) 881146
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 text-center border-t border-gray-300 pt-2">
+          <p className="text-xs font-bold uppercase tracking-wider">Tanda Bukti Pembayaran Retribusi Sampah</p>
+          <p className="text-[10px] font-mono font-medium text-gray-500">No. Invoice: {invoiceId}</p>
+        </div>
       </div>
 
       {/* Details */}

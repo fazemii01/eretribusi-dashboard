@@ -254,6 +254,22 @@ export default function TagihanAdminPage() {
             </select>
           </div>
 
+          {/* Filter Status Tagihan */}
+          <div className="lg:col-span-2">
+            <label className="block text-xs font-semibold text-[var(--color-ink-500)] uppercase tracking-wider mb-1.5">
+              Status Tagihan
+            </label>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs bg-[var(--color-ink-50)] text-[var(--color-ink-900)] focus:outline-none"
+            >
+              <option value="">Semua Status</option>
+              <option value="Belum Lunas">Belum Lunas</option>
+              <option value="Lunas">Lunas</option>
+            </select>
+          </div>
+
           {/* Print PDF Report Action */}
           <div className="lg:col-span-2">
             <button
@@ -314,13 +330,15 @@ export default function TagihanAdminPage() {
                     </td>
                     <td className="p-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => setPayModalData(item)}
-                          className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
-                          title="Proses Bayar / Tampilkan QRIS"
-                        >
-                          <DollarSign className="w-4 h-4" />
-                        </button>
+                        {!isLunas && (
+                          <button
+                            onClick={() => setPayModalData(item)}
+                            className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
+                            title="Proses Bayar / Tampilkan QRIS"
+                          >
+                            <DollarSign className="w-4 h-4" />
+                          </button>
+                        )}
                         {isLunas && (
                           <button
                             onClick={() => handleTriggerSingleReceiptPrint(item)}
@@ -402,7 +420,7 @@ export default function TagihanAdminPage() {
             {/* Dynamic QRIS Code Section */}
             <div className="flex flex-col items-center justify-center p-5 bg-white rounded-2xl border-2 border-dashed border-[var(--color-brand-mid)]/30 space-y-3 text-center">
               <div className="px-3 py-1 rounded-full bg-[var(--color-brand-wash)] text-[var(--color-brand-deep)] text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1">
-                <QrCode className="w-3.5 h-3.5" /> Dynamic QRIS Lumajang
+                <QrCode className="w-3.5 h-3.5" /> Dynamic QRIS
               </div>
 
               <QRCodeSVG
@@ -480,10 +498,10 @@ export default function TagihanAdminPage() {
                 <select
                   value={genTahun}
                   onChange={(e) => setGenTahun(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none font-bold"
                 >
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
+                  <option value={new Date().getFullYear().toString()}>{new Date().getFullYear()}</option>
+                  <option value={(new Date().getFullYear() + 1).toString()}>{new Date().getFullYear() + 1}</option>
                 </select>
               </div>
 
@@ -494,12 +512,27 @@ export default function TagihanAdminPage() {
                 <select
                   value={genBulan}
                   onChange={(e) => setGenBulan(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none font-bold"
                 >
-                  <option value="April 2026">April 2026</option>
-                  <option value="Mei 2026">Mei 2026</option>
-                  <option value="Juni 2026">Juni 2026</option>
-                  <option value="Juli 2026">Juli 2026</option>
+                  {(() => {
+                    const months = [
+                      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+                    ];
+                    const now = new Date();
+                    const curYear = now.getFullYear();
+                    const curMonth = now.getMonth(); // 0-11
+                    const selYear = parseInt(genTahun, 10);
+
+                    return months.map((m, idx) => {
+                      const isPast = selYear < curYear || (selYear === curYear && idx < curMonth);
+                      return (
+                        <option key={m} value={`${m} ${genTahun}`} disabled={isPast}>
+                          {m} {genTahun} {isPast ? '(Masa Lalu - Terkunci)' : ''}
+                        </option>
+                      );
+                    });
+                  })()}
                 </select>
               </div>
 

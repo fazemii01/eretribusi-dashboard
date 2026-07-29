@@ -23,6 +23,11 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'E-Retribusi Sampah | DLH Kabupaten Lumajang',
   description: 'Portal Layanan Administrasi Pembayaran Iuran Kebersihan Lingkungan Dinas Lingkungan Hidup Kabupaten Lumajang',
+  icons: {
+    icon: '/logo-dlh.png',
+    shortcut: '/logo-dlh.png',
+    apple: '/logo-dlh.png',
+  },
 };
 
 export default function RootLayout({

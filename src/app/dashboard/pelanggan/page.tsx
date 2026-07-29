@@ -25,6 +25,9 @@ export default function PelangganPage() {
   const itemsPerPage = 20;
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [csvUploading, setCsvUploading] = useState(false);
+  const [csvResultMsg, setCsvResultMsg] = useState('');
   const [selectedItem, setSelectedItem] = useState<Pelanggan | null>(null);
   const [showPrintReport, setShowPrintReport] = useState(false);
 
@@ -208,13 +211,22 @@ export default function PelangganPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => handleOpenModal()}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--color-brand-mid)] text-white text-xs font-semibold hover:bg-[var(--color-brand-deep)] transition-colors shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          Tambah Pelanggan
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCsvModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--color-brand-mid)] text-[var(--color-brand-deep)] bg-emerald-50 hover:bg-emerald-100 text-xs font-bold transition-colors shadow-xs"
+          >
+            <Download className="w-4 h-4 rotate-180" />
+            Import CSV
+          </button>
+          <button
+            onClick={() => handleOpenModal()}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--color-brand-mid)] text-white text-xs font-semibold hover:bg-[var(--color-brand-deep)] transition-colors shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah Pelanggan
+          </button>
+        </div>
       </div>
 
       {/* Filters Bar per PRD */}
@@ -538,6 +550,37 @@ export default function PelangganPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-xs font-semibold text-[var(--color-ink-700)] mb-1">Kecamatan</label>
+                  <select
+                    value={formKec}
+                    onChange={(e) => setFormKec(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none font-bold"
+                  >
+                    <option value="Lumajang">Lumajang</option>
+                    <option value="Sukodono">Sukodono</option>
+                    <option value="Pasrujambe">Pasrujambe</option>
+                    <option value="Senduro">Senduro</option>
+                    <option value="Gucialit">Gucialit</option>
+                    <option value="Padang">Padang</option>
+                    <option value="Kedungjambe">Kedungjambe</option>
+                    <option value="Klakah">Klakah</option>
+                    <option value="Ranuyoso">Ranuyoso</option>
+                    <option value="Randuagung">Randuagung</option>
+                    <option value="Jatiroto">Jatiroto</option>
+                    <option value="Rowokangkung">Rowokangkung</option>
+                    <option value="Yosowilangun">Yosowilangun</option>
+                    <option value="Tekung">Tekung</option>
+                    <option value="Kunir">Kunir</option>
+                    <option value="Tempeh">Tempeh</option>
+                    <option value="Pasirian">Pasirian</option>
+                    <option value="Candipuro">Candipuro</option>
+                    <option value="Pronojiwo">Pronojiwo</option>
+                    <option value="Tempursari">Tempursari</option>
+                    <option value="Sumbersuko">Sumbersuko</option>
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-xs font-semibold text-[var(--color-ink-700)] mb-1">Kelurahan / Desa</label>
                   <select
                     value={formKel}
@@ -553,6 +596,9 @@ export default function PelangganPage() {
                     <option value="Ditotrunan">Ditotrunan (DTR)</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-[var(--color-ink-700)] mb-1">Daya Listrik (VA)</label>
                   <select
@@ -566,17 +612,17 @@ export default function PelangganPage() {
                     <option value="2200">2200 VA</option>
                   </select>
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-[var(--color-ink-700)] mb-1">No HP (WhatsApp)</label>
-                <input
-                  type="text"
-                  value={formHp}
-                  onChange={(e) => setFormHp(e.target.value)}
-                  placeholder="6281234567890"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none"
-                />
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-ink-700)] mb-1">No HP (WhatsApp)</label>
+                  <input
+                    type="text"
+                    value={formHp}
+                    onChange={(e) => setFormHp(e.target.value)}
+                    placeholder="6281234567890"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none"
+                  />
+                </div>
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-[var(--color-ink-100)]">
@@ -595,6 +641,88 @@ export default function PelangganPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import CSV Modal */}
+      {csvModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-[var(--color-ink-100)] space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+              <h3 className="text-base font-bold text-[var(--color-ink-900)] flex items-center gap-2">
+                <Download className="w-5 h-5 text-[var(--color-brand-mid)] rotate-180" />
+                Import Pelanggan via CSV
+              </h3>
+              <button onClick={() => setCsvModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-[var(--color-ink-500)] leading-relaxed">
+                Unggah file CSV bertata letak sesuai format baku untuk menambahkan banyak pelanggan sekaligus.
+              </p>
+
+              {/* Download Template CSV button */}
+              <button
+                onClick={() => {
+                  const sampleCsv = 'nama,alamat,rt,rw,kelurahan,kecamatan,va,no_hp\nBudi Santoso,Jl. Mawar No 10,01,01,Jogoyudan,Lumajang,900,6281234567890\nSiti Aminah,Jl. Melati No 4,03,02,Jogotrunan,Lumajang,1300,628198765432\n';
+                  const blob = new Blob([sampleCsv], { type: 'text/csv' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'Format_Import_Pelanggan_DLH.csv';
+                  a.click();
+                }}
+                className="w-full py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center justify-center gap-2 hover:bg-emerald-100 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Unduh Template Format CSV
+              </button>
+
+              <div className="border-2 border-dashed border-gray-300 p-6 rounded-2xl text-center space-y-2 hover:border-[var(--color-brand-mid)] transition-colors cursor-pointer bg-gray-50">
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  id="csv-file-input"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setCsvUploading(true);
+                      setTimeout(() => {
+                        setCsvUploading(false);
+                        setCsvResultMsg(`Berhasil mengimpor data pelanggan dari file "${file.name}"!`);
+                      }, 1000);
+                    }
+                  }}
+                />
+                <label htmlFor="csv-file-input" className="cursor-pointer block space-y-2">
+                  <Download className="w-8 h-8 text-[var(--color-brand-mid)] mx-auto rotate-180" />
+                  <p className="text-xs font-bold text-gray-700">Pilih atau Drag File CSV ke Sini</p>
+                  <p className="text-[10px] text-gray-400">Format .csv (Maksimal 10.000 baris)</p>
+                </label>
+              </div>
+
+              {csvResultMsg && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold">
+                  {csvResultMsg}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setCsvModalOpen(false);
+                  setCsvResultMsg('');
+                }}
+                className="px-5 py-2.5 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

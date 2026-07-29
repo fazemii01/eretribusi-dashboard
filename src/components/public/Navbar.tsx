@@ -19,8 +19,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-[var(--color-brand-wash)] flex items-center justify-center text-[var(--color-brand-mid)] border border-[var(--color-brand-light)]/20 transition-transform group-hover:scale-105">
-            <Leaf className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center border border-[var(--color-ink-200)] shadow-xs transition-transform group-hover:scale-105">
+            <img src="/logo-dlh.png" alt="Logo DLH Lumajang" className="w-full h-full object-contain" />
           </div>
           <div>
             <span className="text-lg font-bold text-[var(--color-brand-deep)] tracking-tight block leading-none">

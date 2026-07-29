@@ -24,6 +24,7 @@ export default function Sidebar() {
   const [role, setRole] = useState<string>('admin');
   const [username, setUsername] = useState<string>('Admin DLH');
   const [retribusiOpen, setRetribusiOpen] = useState(true);
+  const [pengaturanOpen, setPengaturanOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -116,46 +117,95 @@ export default function Sidebar() {
         )}
       </div>
 
+      {/* Pengaturan Dropdown */}
       {isAdmin && (
+        <div>
+          <button
+            onClick={() => setPengaturanOpen(!pengaturanOpen)}
+            className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold text-[var(--color-sidebar-text)] hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Settings className="w-4 h-4" />
+              <span>Pengaturan</span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${pengaturanOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {pengaturanOpen && (
+            <div className="pl-9 pr-2 py-1 space-y-1">
+              <Link
+                href="/dashboard/pengaturan/wilayah"
+                className={`block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                  pathname === '/dashboard/pengaturan/wilayah'
+                    ? 'text-white bg-white/10 font-semibold'
+                    : 'text-[var(--color-sidebar-text)] hover:text-white'
+                }`}
+              >
+                Kode Wilayah
+              </Link>
+
+              {isKetua && (
+                <Link
+                  href="/dashboard/tarif"
+                  className={`block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                    pathname === '/dashboard/tarif'
+                      ? 'text-white bg-white/10 font-semibold'
+                      : 'text-[var(--color-sidebar-text)] hover:text-white'
+                  }`}
+                >
+                  Tarif Retribusi
+                </Link>
+              )}
+
+              <Link
+                href="/dashboard/pengaturan/jadwal"
+                className={`block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                  pathname === '/dashboard/pengaturan/jadwal'
+                    ? 'text-white bg-white/10 font-semibold'
+                    : 'text-[var(--color-sidebar-text)] hover:text-white'
+                }`}
+              >
+                Jadwal Otomatis
+              </Link>
+
+              <Link
+                href="/dashboard/pengaturan/aplikasi"
+                className={`block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                  pathname === '/dashboard/pengaturan/aplikasi'
+                    ? 'text-white bg-white/10 font-semibold'
+                    : 'text-[var(--color-sidebar-text)] hover:text-white'
+                }`}
+              >
+                Aplikasi
+              </Link>
+
+              <Link
+                href="/dashboard/pengaturan"
+                className={`block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                  pathname === '/dashboard/pengaturan'
+                    ? 'text-white bg-white/10 font-semibold'
+                    : 'text-[var(--color-sidebar-text)] hover:text-white'
+                }`}
+              >
+                Panduan Pembayaran
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isKetua && (
         <Link
-          href="/dashboard/pengaturan"
+          href="/dashboard/user"
           className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
-            pathname === '/dashboard/pengaturan'
+            pathname === '/dashboard/user'
               ? 'bg-[var(--color-sidebar-active-bg)] text-white'
               : 'text-[var(--color-sidebar-text)] hover:text-white hover:bg-white/5'
           }`}
         >
-          <HelpCircle className="w-4 h-4" />
-          Panduan Pembayaran
+          <ShieldAlert className="w-4 h-4" />
+          Manajemen User
         </Link>
-      )}
-
-      {isKetua && (
-        <>
-          <Link
-            href="/dashboard/tarif"
-            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
-              pathname === '/dashboard/tarif'
-                ? 'bg-[var(--color-sidebar-active-bg)] text-white'
-                : 'text-[var(--color-sidebar-text)] hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            Pengaturan Tarif
-          </Link>
-
-          <Link
-            href="/dashboard/user"
-            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-colors ${
-              pathname === '/dashboard/user'
-                ? 'bg-[var(--color-sidebar-active-bg)] text-white'
-                : 'text-[var(--color-sidebar-text)] hover:text-white hover:bg-white/5'
-            }`}
-          >
-            <ShieldAlert className="w-4 h-4" />
-            Manajemen User
-          </Link>
-        </>
       )}
     </nav>
   );
@@ -184,8 +234,8 @@ export default function Sidebar() {
       {/* 1. Mobile Top Navigation Header */}
       <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-[var(--color-sidebar-bg)] text-white border-b border-[var(--color-sidebar-border)] sticky top-0 z-30 shadow-md">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[var(--color-brand-mid)] flex items-center justify-center text-white">
-            <Leaf className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shrink-0">
+            <img src="/logo-dlh.png" alt="Logo DLH Lumajang" className="w-full h-full object-contain" />
           </div>
           <div>
             <h3 className="text-sm font-bold tracking-tight text-white leading-tight">E-Retribusi</h3>
@@ -220,8 +270,8 @@ export default function Sidebar() {
       >
         <div className="p-4 flex items-center justify-between border-b border-[var(--color-sidebar-border)]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[var(--color-brand-mid)] flex items-center justify-center text-white">
-              <Leaf className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shrink-0">
+              <img src="/logo-dlh.png" alt="Logo DLH Lumajang" className="w-full h-full object-contain" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-white leading-tight">E-Retribusi</h3>
@@ -255,8 +305,8 @@ export default function Sidebar() {
       {/* 4. Desktop Sidebar (Hidden on Mobile) */}
       <aside className="hidden lg:flex w-64 bg-[var(--color-sidebar-bg)] text-white flex-col h-screen sticky top-0 shrink-0 border-r border-[var(--color-sidebar-border)] z-40">
         <div className="p-6 flex items-center gap-3 border-b border-[var(--color-sidebar-border)]">
-          <div className="w-9 h-9 rounded-xl bg-[var(--color-brand-mid)] flex items-center justify-center text-white">
-            <Leaf className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
+            <img src="/logo-dlh.png" alt="Logo DLH Lumajang" className="w-full h-full object-contain" />
           </div>
           <div>
             <h3 className="text-base font-bold tracking-tight text-white leading-none">E-Retribusi</h3>
