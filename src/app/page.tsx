@@ -69,7 +69,7 @@ export default function Home() {
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-[var(--color-ink-900)]">Contoh ID Retribusi</h4>
-                      <span className="text-xs font-mono-id text-[var(--color-brand-deep)]">JGY0101001</span>
+                      <span className="text-xs font-mono-id text-[var(--color-brand-deep)]">LMJ-JGY-0001</span>
                     </div>
                   </div>
                   <span className="px-2.5 py-1 rounded-full bg-[var(--color-success-bg)] text-[var(--color-success)] text-xs font-semibold">
@@ -94,7 +94,7 @@ export default function Home() {
 
                 <div className="pt-2">
                   <Link
-                    href="/tagihan?id=JGY0101001"
+                    href="/tagihan?id=LMJ-JGY-0001"
                     className="w-full py-3 rounded-xl bg-[var(--color-ink-50)] hover:bg-[var(--color-brand-wash)] text-[var(--color-brand-deep)] text-xs font-semibold flex items-center justify-center gap-2 border border-[var(--color-ink-100)] transition-colors"
                   >
                     <Search className="w-4 h-4" />
