@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Plus, Edit, Trash2, ShieldCheck, X } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
+import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
+import { useToastConfirm } from '@/hooks/useToastConfirm';
 
 interface UserItem {
   uuid: string;
@@ -11,6 +14,8 @@ interface UserItem {
 }
 
 export default function UserPage() {
+  const { toasts, showToast, dismissToast, confirmState, confirmAction, closeConfirm } = useToastConfirm();
+
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
@@ -20,13 +25,37 @@ export default function UserPage() {
   const [formNama, setFormNama] = useState('');
   const [formRole, setFormRole] = useState<'ketua' | 'admin' | 'petugas'>('admin');
 
-  const mockUsers: UserItem[] = [
-    { uuid: 'usr-8921-9921-a12b', username: 'ketua_dlh', namaLengkap: 'Drs. H. Hendra Wijaya', role: 'ketua' },
-    { uuid: 'usr-1204-8849-c43d', username: 'admin_keuangan', namaLengkap: 'Budi Santoso, S.E.', role: 'admin' },
-    { uuid: 'usr-4491-0023-e98f', username: 'petugas_loket1', namaLengkap: 'Ahmad Fauzi', role: 'petugas' },
-  ];
+  const [userList, setUserList] = useState<UserItem[]>([]);
 
-  const filteredUsers = mockUsers.filter((u) => {
+  const loadUsers = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/user`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        const rawList = Array.isArray(data) ? data : data.data || [];
+        setUserList(
+          rawList.map((u: any) => ({
+            uuid: u.id || u.uuid || u.username,
+            username: u.username,
+            namaLengkap: u.nama_lengkap || u.username,
+            role: u.role as any,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to load user API:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const filteredUsers = userList.filter((u) => {
     return (
       search === '' ||
       u.username.toLowerCase().includes(search.toLowerCase()) ||
@@ -49,6 +78,73 @@ export default function UserPage() {
       setFormPassword('');
     }
     setModalOpen(true);
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const payload: any = {
+        id: selectedUser ? selectedUser.uuid : undefined,
+        username: formUsername,
+        nama_lengkap: formNama,
+        role: formRole,
+      };
+      if (formPassword) payload.password = formPassword;
+
+      const res = await fetch(`${API_BASE_URL}/user`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setModalOpen(false);
+        showToast('Data pengurus berhasil disimpan!', 'success');
+        await loadUsers();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(`Gagal menyimpan pengurus: ${err.message || 'Terjadi kesalahan'}`, 'error');
+      }
+    } catch (err) {
+      console.error('Error saving user:', err);
+      showToast('Gagal terhubung ke server backend', 'error');
+    }
+  };
+
+  const handleDeleteUser = (id: string, username: string) => {
+    confirmAction({
+      title: 'Hapus Akun Pengurus',
+      message: `Apakah Anda yakin ingin menghapus akun pengurus "${username}"?`,
+      itemId: username,
+      confirmText: 'Ya, Hapus Pengurus',
+      onConfirm: async () => {
+        try {
+          const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+          const headers: Record<string, string> = {};
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+
+          const res = await fetch(`${API_BASE_URL}/user/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers,
+          });
+
+          if (res.ok) {
+            showToast(`Pengurus "${username}" berhasil dihapus!`, 'success');
+            await loadUsers();
+          } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(`Gagal menghapus pengurus: ${err.message || 'Terjadi kesalahan'}`, 'error');
+          }
+        } catch (err) {
+          console.error('Error deleting user:', err);
+          showToast('Gagal terhubung ke server backend', 'error');
+        }
+      },
+    });
   };
 
   return (
@@ -132,6 +228,7 @@ export default function UserPage() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => handleDeleteUser(u.uuid, u.username)}
                           className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                           title="Hapus Pengurus"
                         >
@@ -161,10 +258,7 @@ export default function UserPage() {
             </div>
 
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setModalOpen(false);
-              }}
+              onSubmit={handleSaveUser}
               className="space-y-4"
             >
               <div>
@@ -238,6 +332,13 @@ export default function UserPage() {
           </div>
         </div>
       )}
+      {/* Toast and Confirmation Modal */}
+      <ToastConfirmModal
+        toasts={toasts}
+        onDismissToast={dismissToast}
+        confirmState={confirmState}
+        onCloseConfirm={closeConfirm}
+      />
     </div>
   );
 }

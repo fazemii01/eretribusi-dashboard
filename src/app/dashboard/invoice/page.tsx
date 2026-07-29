@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import ReceiptPrint from '@/components/admin/ReceiptPrint';
-import { Search, Printer, Download, FileCheck, CheckCircle2, Calendar, User, CreditCard } from 'lucide-react';
+import { Search, Printer, Download, FileCheck, CheckCircle2, Calendar, User, CreditCard, ChevronLeft, ChevronRight } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 
 interface ReceiptRow {
@@ -39,7 +39,7 @@ export default function InvoiceReceiptPage() {
               idKuitansi: p.id_kuitansi,
               idInvoice: p.id_invoice,
               idPelanggan: p.id_pelanggan,
-              nama: p.pelanggan?.nama || p.id_pelanggan,
+              nama: p.pelanggan?.nama || p.nama || p.id_pelanggan || '-',
               alamat: p.pelanggan?.alamat ? `${p.pelanggan.alamat} (RT ${p.pelanggan.rt || '01'} / RW ${p.pelanggan.rw || '01'})` : '-',
               waktuBayar: p.waktu_bayar ? new Date(p.waktu_bayar).toLocaleString('id-ID') : new Date(p.created_at || Date.now()).toLocaleString('id-ID'),
               bulan: p.bulan,
@@ -57,16 +57,32 @@ export default function InvoiceReceiptPage() {
     loadReceipts();
   }, []);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
   const filteredReceipts = receipts.filter((item) => {
+    if (!item) return false;
+    const namaStr = (item.nama || '').toLowerCase();
+    const idStr = (item.idPelanggan || '').toLowerCase();
+    const kuitansiStr = (item.idKuitansi || '').toLowerCase();
+    const searchStr = (search || '').toLowerCase();
+
     const matchSearch =
       search === '' ||
-      item.nama.toLowerCase().includes(search.toLowerCase()) ||
-      item.idPelanggan.toLowerCase().includes(search.toLowerCase()) ||
-      item.idKuitansi.toLowerCase().includes(search.toLowerCase());
-    const matchTahun = filterTahun === '' || item.tahun === filterTahun;
-    const matchBulan = filterBulan === '' || item.bulan.toLowerCase().includes(filterBulan.toLowerCase());
+      namaStr.includes(searchStr) ||
+      idStr.includes(searchStr) ||
+      kuitansiStr.includes(searchStr);
+    const matchTahun = filterTahun === '' || (item.tahun || '') === filterTahun;
+    const matchBulan = filterBulan === '' || (item.bulan || '').toLowerCase().includes(filterBulan.toLowerCase());
     return matchSearch && matchTahun && matchBulan;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredReceipts.length / itemsPerPage));
+
+  const paginatedReceipts = filteredReceipts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handlePrintReceipt = (row: ReceiptRow) => {
     setPrintReceiptData(row);
@@ -189,40 +205,75 @@ export default function InvoiceReceiptPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-ink-100)] text-[var(--color-ink-700)]">
-              {filteredReceipts.map((item) => (
-                <tr key={item.idKuitansi} className="hover:bg-[var(--color-ink-50)] transition-colors">
-                  <td className="p-4 font-mono text-xs font-bold text-[var(--color-brand-deep)]">
-                    {item.idKuitansi}
-                  </td>
-                  <td className="p-4">
-                    <span className="font-mono-id px-2.5 py-1 rounded-md bg-[var(--color-brand-wash)] text-[var(--color-brand-deep)] font-bold text-xs border border-[var(--color-brand-light)]/20">
-                      {item.idPelanggan}
-                    </span>
-                  </td>
-                  <td className="p-4 font-bold text-[var(--color-ink-900)]">{item.nama}</td>
-                  <td className="p-4 text-xs font-medium text-[var(--color-ink-700)]">{item.waktuBayar}</td>
-                  <td className="p-4 font-semibold">{item.bulan}</td>
-                  <td className="p-4 font-bold text-[var(--color-success)]">
-                    Rp {item.nominal.toLocaleString('id-ID')}
-                  </td>
-                  <td className="p-4 text-xs">
-                    <span className="font-medium block text-[var(--color-ink-900)]">{item.admin}</span>
-                    <span className="text-[10px] text-[var(--color-ink-500)]">{item.kanal}</span>
-                  </td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => handlePrintReceipt(item)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 font-bold text-xs transition-colors shadow-xs"
-                      title="Cetak Kuitansi Resmi"
-                    >
-                      <Printer className="w-4 h-4" />
-                      Cetak PDF
-                    </button>
+              {filteredReceipts.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-12 text-center text-xs text-[var(--color-ink-500)] bg-[var(--color-ink-50)]/50">
+                    Belum ada bukti tanda terima pembayaran.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedReceipts.map((item) => (
+                  <tr key={item.idKuitansi} className="hover:bg-[var(--color-ink-50)] transition-colors">
+                    <td className="p-4 font-mono text-xs font-bold text-[var(--color-brand-deep)]">
+                      {item.idKuitansi}
+                    </td>
+                    <td className="p-4">
+                      <span className="font-mono-id px-2.5 py-1 rounded-md bg-[var(--color-brand-wash)] text-[var(--color-brand-deep)] font-bold text-xs border border-[var(--color-brand-light)]/20">
+                        {item.idPelanggan}
+                      </span>
+                    </td>
+                    <td className="p-4 font-bold text-[var(--color-ink-900)]">{item.nama}</td>
+                    <td className="p-4 text-xs font-medium text-[var(--color-ink-700)]">{item.waktuBayar}</td>
+                    <td className="p-4 font-semibold">{item.bulan}</td>
+                    <td className="p-4 font-bold text-[var(--color-brand-deep)]">
+                      Rp {item.nominal.toLocaleString('id-ID')}
+                    </td>
+                    <td className="p-4 text-xs font-medium">
+                      <div className="font-bold text-[var(--color-ink-900)]">{item.admin}</div>
+                      <div className="text-[var(--color-ink-500)]">{item.kanal}</div>
+                    </td>
+                    <td className="p-4 text-center">
+                      <button
+                        onClick={() => handlePrintReceipt(item)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-50 text-teal-700 hover:bg-teal-100 transition-colors text-xs font-bold border border-teal-200"
+                        title="Cetak Kuitansi Resmi"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        Cetak
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Bar */}
+        <div className="p-4 border-t border-[var(--color-ink-100)] bg-[var(--color-ink-50)] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--color-ink-500)]">
+          <div>
+            Menampilkan <span className="font-bold text-[var(--color-ink-900)]">{filteredReceipts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> - <span className="font-bold text-[var(--color-ink-900)]">{Math.min(currentPage * itemsPerPage, filteredReceipts.length)}</span> dari <span className="font-bold text-[var(--color-ink-900)]">{filteredReceipts.length.toLocaleString('id-ID')}</span> kuitansi
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-[var(--color-ink-300)] bg-white disabled:opacity-40 hover:bg-[var(--color-ink-50)]"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="font-semibold text-[var(--color-ink-900)] px-2">
+              Halaman {currentPage} dari {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="p-2 rounded-lg border border-[var(--color-ink-300)] bg-white disabled:opacity-40 hover:bg-[var(--color-ink-50)]"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 

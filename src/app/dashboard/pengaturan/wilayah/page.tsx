@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Download, Edit, Trash2, MapPin, X, Check } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
+import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
+import { useToastConfirm } from '@/hooks/useToastConfirm';
 
 interface WilayahItem {
   id: string;
@@ -11,6 +14,8 @@ interface WilayahItem {
 }
 
 export default function KodeWilayahPage() {
+  const { toasts, showToast, dismissToast, confirmState, confirmAction, closeConfirm } = useToastConfirm();
+
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [csvModalOpen, setCsvModalOpen] = useState(false);
@@ -21,18 +26,31 @@ export default function KodeWilayahPage() {
   const [formKode, setFormKode] = useState('');
   const [csvMsg, setCsvMsg] = useState('');
 
-  const [wilayahList, setWilayahList] = useState<WilayahItem[]>([
-    { id: '1', kecamatan: 'Lumajang', kelurahan: 'Jogoyudan', kodeSingkatan: 'JGY' },
-    { id: '2', kecamatan: 'Lumajang', kelurahan: 'Jogotrunan', kodeSingkatan: 'JGT' },
-    { id: '3', kecamatan: 'Lumajang', kelurahan: 'Rogotrunan', kodeSingkatan: 'RGT' },
-    { id: '4', kecamatan: 'Lumajang', kelurahan: 'Citrodiwangsan', kodeSingkatan: 'CTR' },
-    { id: '5', kecamatan: 'Lumajang', kelurahan: 'Tompokersan', kodeSingkatan: 'TMP' },
-    { id: '6', kecamatan: 'Lumajang', kelurahan: 'Kepuharjo', kodeSingkatan: 'KPH' },
-    { id: '7', kecamatan: 'Lumajang', kelurahan: 'Ditotrunan', kodeSingkatan: 'DTR' },
-    { id: '8', kecamatan: 'Sukodono', kelurahan: 'Dawuhan Lor', kodeSingkatan: 'DWL' },
-    { id: '9', kecamatan: 'Sukodono', kelurahan: 'Kutorenon', kodeSingkatan: 'KTR' },
-    { id: '10', kecamatan: 'Pasirian', kelurahan: 'Pasirian', kodeSingkatan: 'PSR' },
-  ]);
+  const [wilayahList, setWilayahList] = useState<WilayahItem[]>([]);
+
+  const loadWilayah = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/wilayah`);
+      if (res.ok) {
+        const data = await res.json();
+        const rawList = Array.isArray(data) ? data : data.data || [];
+        setWilayahList(
+          rawList.map((w: any) => ({
+            id: w.id.toString(),
+            kecamatan: w.kecamatan,
+            kelurahan: w.kelurahan,
+            kodeSingkatan: w.kode_kel || w.kelurahan.slice(0, 3).toUpperCase(),
+          }))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to load wilayah API:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadWilayah();
+  }, []);
 
   const filteredData = useMemo(() => {
     return wilayahList.filter(
@@ -59,32 +77,70 @@ export default function KodeWilayahPage() {
     setModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedItem) {
-      setWilayahList((prev) =>
-        prev.map((w) =>
-          w.id === selectedItem.id
-            ? { ...w, kecamatan: formKec, kelurahan: formKel, kodeSingkatan: formKode }
-            : w
-        )
-      );
-    } else {
-      const newItem: WilayahItem = {
-        id: Date.now().toString(),
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const payload = {
+        id: selectedItem ? Number(selectedItem.id) : undefined,
         kecamatan: formKec,
         kelurahan: formKel,
-        kodeSingkatan: formKode || formKel.slice(0, 3).toUpperCase(),
+        kode_kel: formKode || formKel.slice(0, 3).toUpperCase(),
       };
-      setWilayahList((prev) => [...prev, newItem]);
+
+      const res = await fetch(`${API_BASE_URL}/wilayah`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setModalOpen(false);
+        showToast('Data Wilayah berhasil disimpan!', 'success');
+        await loadWilayah();
+      } else {
+        showToast('Gagal menyimpan data wilayah', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving wilayah:', err);
+      showToast('Gagal terhubung ke server backend', 'error');
     }
-    setModalOpen(false);
   };
 
   const handleDelete = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus data wilayah ini?')) {
-      setWilayahList((prev) => prev.filter((w) => w.id !== id));
-    }
+    const item = wilayahList.find((w) => w.id === id);
+    confirmAction({
+      title: 'Hapus Master Wilayah',
+      message: `Apakah Anda yakin ingin menghapus data wilayah Kelurahan/Desa "${item?.kelurahan || id}" (${item?.kecamatan || 'Lumajang'})?`,
+      itemId: item?.kodeSingkatan,
+      itemNama: item?.kelurahan,
+      confirmText: 'Ya, Hapus Wilayah',
+      onConfirm: async () => {
+        try {
+          const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+          const headers: Record<string, string> = {};
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+
+          const res = await fetch(`${API_BASE_URL}/wilayah/${id}`, {
+            method: 'DELETE',
+            headers,
+          });
+
+          if (res.ok) {
+            showToast('Data wilayah berhasil dihapus!', 'success');
+            await loadWilayah();
+          } else {
+            showToast('Gagal menghapus data wilayah', 'error');
+          }
+        } catch (err) {
+          console.error('Error deleting wilayah:', err);
+          showToast('Gagal terhubung ke server backend', 'error');
+        }
+      },
+    });
   };
 
   return (
@@ -333,6 +389,13 @@ export default function KodeWilayahPage() {
           </div>
         </div>
       )}
+      {/* Toast and Confirmation Modal */}
+      <ToastConfirmModal
+        toasts={toasts}
+        onDismissToast={dismissToast}
+        confirmState={confirmState}
+        onCloseConfirm={closeConfirm}
+      />
     </div>
   );
 }

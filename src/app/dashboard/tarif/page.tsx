@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Settings, X, Search, Tag, DollarSign } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
+import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
+import { useToastConfirm } from '@/hooks/useToastConfirm';
 
 interface Tarif {
   va: number;
@@ -11,6 +14,8 @@ interface Tarif {
 }
 
 export default function TarifPage() {
+  const { toasts, showToast, dismissToast, confirmState, confirmAction, closeConfirm } = useToastConfirm();
+
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTarif, setSelectedTarif] = useState<Tarif | null>(null);
@@ -19,22 +24,31 @@ export default function TarifPage() {
   const [formNominal, setFormNominal] = useState('');
   const [formKategori, setFormKategori] = useState('Rumah Tangga');
 
-  const [tarifList, setTarifList] = useState<Tarif[]>([
-    { va: 450, nama: 'Rumah Tangga R1-450VA', nominal: 10000, kategori: 'Rumah Tangga' },
-    { va: 900, nama: 'Rumah Tangga R1-900VA', nominal: 15000, kategori: 'Rumah Tangga' },
-    { va: 1300, nama: 'Rumah Tangga R1-1300VA', nominal: 25000, kategori: 'Rumah Tangga' },
-    { va: 2200, nama: 'Rumah Tangga R1-2200VA', nominal: 35000, kategori: 'Rumah Tangga' },
-    { va: 3500, nama: 'Rumah Tangga R2-3500VA (Mewah)', nominal: 50000, kategori: 'Rumah Tangga' },
-    { va: 5500, nama: 'Komersial / Minimarket Modern (5500VA)', nominal: 75000, kategori: 'Komersial & Bisnis' },
-    { va: 6600, nama: 'Toko / Ruko Pertokoan Niaga', nominal: 35000, kategori: 'Komersial & Bisnis' },
-    { va: 7700, nama: 'Restoran & Rumah Makan', nominal: 100000, kategori: 'Komersial & Bisnis' },
-    { va: 8800, nama: 'Hotel, Penginapan & Wisma', nominal: 150000, kategori: 'Komersial & Bisnis' },
-    { va: 9900, nama: 'Perkantoran Swasta / Perbankan', nominal: 75000, kategori: 'Komersial & Bisnis' },
-    { va: 11000, nama: 'Puskesmas & Klinik Kesehatan', nominal: 100000, kategori: 'Fasilitas Umum & Sosial' },
-    { va: 13200, nama: 'Rumah Sakit Umum (RSUD)', nominal: 250000, kategori: 'Fasilitas Umum & Sosial' },
-    { va: 16500, nama: 'Kios Pasar Tradisional', nominal: 20000, kategori: 'Fasilitas Umum & Sosial' },
-    { va: 22000, nama: 'Industri / Pabrik Pengolahan', nominal: 300000, kategori: 'Industri' },
-  ]);
+  const [tarifList, setTarifList] = useState<Tarif[]>([]);
+
+  const loadTarif = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/tarif`);
+      if (res.ok) {
+        const data = await res.json();
+        const rawList = Array.isArray(data) ? data : data.data || [];
+        setTarifList(
+          rawList.map((t: any) => ({
+            va: Number(t.va),
+            nama: t.nama_tarif || `Tarif ${t.va} VA`,
+            nominal: Number(t.nominal),
+            kategori: t.va <= 3500 ? 'Rumah Tangga' : t.va <= 10000 ? 'Komersial & Bisnis' : 'Industri & Fasilitas',
+          }))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to load tarif API:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadTarif();
+  }, []);
 
   const filteredTarif = tarifList.filter((t) => {
     return (
@@ -62,19 +76,70 @@ export default function TarifPage() {
     setModalOpen(true);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const vaNum = parseInt(formVa, 10);
     const nomNum = parseInt(formNominal, 10);
 
-    if (selectedTarif) {
-      setTarifList((prev) =>
-        prev.map((t) => (t.va === selectedTarif.va ? { va: vaNum, nama: formNama, nominal: nomNum, kategori: formKategori } : t))
-      );
-    } else {
-      setTarifList((prev) => [...prev, { va: vaNum, nama: formNama, nominal: nomNum, kategori: formKategori }]);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const payload = {
+        va: vaNum,
+        nama_tarif: formNama || `Tarif ${vaNum} VA`,
+        nominal: nomNum,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/tarif`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setModalOpen(false);
+        showToast('Tarif retribusi berhasil disimpan!', 'success');
+        await loadTarif();
+      } else {
+        showToast('Gagal menyimpan tarif retribusi', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving tarif:', err);
+      showToast('Gagal terhubung ke server backend', 'error');
     }
-    setModalOpen(false);
+  };
+
+  const handleDelete = (va: number) => {
+    confirmAction({
+      title: 'Hapus Master Tarif',
+      message: `Apakah Anda yakin ingin menghapus data tarif retribusi ${va} VA?`,
+      itemId: `${va} VA`,
+      confirmText: 'Ya, Hapus Tarif',
+      onConfirm: async () => {
+        try {
+          const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+          const headers: Record<string, string> = {};
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+
+          const res = await fetch(`${API_BASE_URL}/tarif/${va}`, {
+            method: 'DELETE',
+            headers,
+          });
+
+          if (res.ok) {
+            showToast(`Tarif ${va} VA berhasil dihapus!`, 'success');
+            await loadTarif();
+          } else {
+            showToast('Gagal menghapus tarif retribusi', 'error');
+          }
+        } catch (err) {
+          console.error('Error deleting tarif:', err);
+          showToast('Gagal terhubung ke server backend', 'error');
+        }
+      },
+    });
   };
 
   return (
@@ -156,6 +221,7 @@ export default function TarifPage() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => handleDelete(t.va)}
                         className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                         title="Hapus Tarif"
                       >
@@ -254,6 +320,13 @@ export default function TarifPage() {
           </div>
         </div>
       )}
+      {/* Toast and Confirmation Modal */}
+      <ToastConfirmModal
+        toasts={toasts}
+        onDismissToast={dismissToast}
+        confirmState={confirmState}
+        onCloseConfirm={closeConfirm}
+      />
     </div>
   );
 }

@@ -2,9 +2,11 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import ReceiptPrint from '@/components/admin/ReceiptPrint';
-import { Search, Printer, DollarSign, CheckCircle2, XCircle, X, Zap, QrCode, CreditCard, User, Calendar, MapPin, Layers } from 'lucide-react';
+import { Search, Printer, DollarSign, CheckCircle2, XCircle, X, Zap, QrCode, CreditCard, User, Calendar, MapPin, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { API_BASE_URL } from '@/lib/api';
+import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
+import { useToastConfirm } from '@/hooks/useToastConfirm';
 
 interface InvoiceRow {
   idInvoice: string;
@@ -20,7 +22,8 @@ interface InvoiceRow {
   penerima: string;
 }
 
-const getMonthNumber = (bulanStr: string): number => {
+const getMonthNumber = (bulanStr?: string): number => {
+  if (!bulanStr) return 1;
   const b = bulanStr.toLowerCase();
   if (b.includes('januari')) return 1;
   if (b.includes('februari')) return 2;
@@ -38,8 +41,10 @@ const getMonthNumber = (bulanStr: string): number => {
 };
 
 export default function TagihanAdminPage() {
+  const { toasts, showToast, dismissToast, confirmState, confirmAction, closeConfirm } = useToastConfirm();
+
   const [search, setSearch] = useState('');
-  const [filterTahun, setFilterTahun] = useState('2026');
+  const [filterTahun, setFilterTahun] = useState('');
   const [filterBulan, setFilterBulan] = useState('');
   const [filterBatch, setFilterBatch] = useState(''); // '' | 'batch1' | 'batch2'
   const [filterStatus, setFilterStatus] = useState('');
@@ -56,7 +61,7 @@ export default function TagihanAdminPage() {
   // Generate Mass Invoices Modal State
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [genTahun, setGenTahun] = useState('2026');
-  const [genBulan, setGenBulan] = useState('April 2026');
+  const [genBulan, setGenBulan] = useState('Juli');
   const [genSuccessMsg, setGenSuccessMsg] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -72,16 +77,16 @@ export default function TagihanAdminPage() {
           const rawList = Array.isArray(data) ? data : data.data || [];
           setInvoices(
             rawList.map((inv: any) => ({
-              idInvoice: inv.id_invoice,
-              idPelanggan: inv.id_pelanggan,
-              nama: inv.pelanggan?.nama || inv.id_pelanggan,
-              alamat: inv.pelanggan?.alamat || '-',
+              idInvoice: inv.id_invoice || `INV-${inv.id}`,
+              idPelanggan: inv.id_pelanggan || '-',
+              nama: inv.pelanggan?.nama || inv.nama || inv.id_pelanggan || '-',
+              alamat: inv.pelanggan?.alamat || inv.alamat || '-',
               rt: inv.pelanggan?.rt || '01',
               rw: inv.pelanggan?.rw || '01',
               tahun: inv.bulan ? inv.bulan.split(' ').pop() || '2026' : '2026',
-              bulan: inv.bulan,
-              nominal: Number(inv.nominal),
-              status: inv.status === 'lunas' ? 'Lunas' : 'Belum Lunas',
+              bulan: inv.bulan || 'Maret 2026',
+              nominal: Number(inv.nominal) || 0,
+              status: inv.status === 'lunas' || inv.status === 'Lunas' ? 'Lunas' : 'Belum Lunas',
               penerima: inv.penerima || '-',
             }))
           );
@@ -93,15 +98,21 @@ export default function TagihanAdminPage() {
     loadInvoices();
   }, []);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
   const filteredInvoices = useMemo(() => {
+    if (!Array.isArray(invoices)) return [];
     return invoices
       .filter((item) => {
-        const matchSearch =
-          search === '' ||
-          item.nama.toLowerCase().includes(search.toLowerCase()) ||
-          item.idPelanggan.toLowerCase().includes(search.toLowerCase());
-        const matchTahun = filterTahun === '' || item.tahun === filterTahun;
-        const matchBulan = filterBulan === '' || item.bulan.toLowerCase().includes(filterBulan.toLowerCase());
+        if (!item) return false;
+        const namaStr = (item.nama || '').toLowerCase();
+        const idStr = (item.idPelanggan || '').toLowerCase();
+        const searchStr = (search || '').toLowerCase();
+
+        const matchSearch = search === '' || namaStr.includes(searchStr) || idStr.includes(searchStr);
+        const matchTahun = filterTahun === '' || (item.tahun || '') === filterTahun;
+        const matchBulan = filterBulan === '' || (item.bulan || '').toLowerCase().includes(filterBulan.toLowerCase());
         const matchStatus = filterStatus === '' || item.status === filterStatus;
 
         const monthNum = getMonthNumber(item.bulan);
@@ -114,6 +125,13 @@ export default function TagihanAdminPage() {
       })
       .sort((a, b) => getMonthNumber(a.bulan) - getMonthNumber(b.bulan));
   }, [invoices, search, filterTahun, filterBulan, filterBatch, filterStatus]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / itemsPerPage));
+
+  const paginatedInvoices = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredInvoices.slice(start, start + itemsPerPage);
+  }, [filteredInvoices, currentPage]);
 
   const totalNominal = filteredInvoices.reduce((acc, curr) => acc + curr.nominal, 0);
   const totalLunas = filteredInvoices
@@ -137,38 +155,104 @@ export default function TagihanAdminPage() {
     }, 200);
   };
 
-  const handleMarkAsPaid = (idInvoice: string) => {
-    setIsProcessingPay(true);
-    setTimeout(() => {
-      setInvoices((prev) =>
-        prev.map((inv) =>
-          inv.idInvoice === idInvoice
-            ? { ...inv, status: 'Lunas', penerima: 'Loket Petugas DLH' }
-            : inv
-        )
-      );
-      setIsProcessingPay(false);
-      setPaySuccessMsg('Pembayaran berhasil dikonfirmasi dan status invoice telah LUNAS!');
-      setTimeout(() => {
-        setPayModalData(null);
-        setPaySuccessMsg('');
-      }, 1500);
-    }, 600);
+  const loadInvoices = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/tagihan`);
+      if (res.ok) {
+        const data = await res.json();
+        const rawList = Array.isArray(data) ? data : data.data || [];
+        setInvoices(
+          rawList.map((inv: any) => ({
+            idInvoice: inv.id_invoice || `INV-${inv.id}`,
+            idPelanggan: inv.id_pelanggan || '-',
+            nama: inv.pelanggan?.nama || inv.nama || inv.id_pelanggan || '-',
+            alamat: inv.pelanggan?.alamat || inv.alamat || '-',
+            rt: inv.pelanggan?.rt || '01',
+            rw: inv.pelanggan?.rw || '01',
+            tahun: inv.bulan ? inv.bulan.split(' ').pop() || '2026' : '2026',
+            bulan: inv.bulan || 'Maret 2026',
+            nominal: Number(inv.nominal) || 0,
+            status: inv.status === 'lunas' || inv.status === 'Lunas' ? 'Lunas' : 'Belum Lunas',
+            penerima: inv.penerima || '-',
+          }))
+        );
+      }
+    } catch (err) {
+      console.error('Error reloading invoices:', err);
+    }
   };
 
-  const handleGenerateInvoices = () => {
+  const handleMarkAsPaid = async (idInvoice: string) => {
+    setIsProcessingPay(true);
+    setPaySuccessMsg('');
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const inv = invoices.find((i) => i.idInvoice === idInvoice);
+
+      const payload = {
+        id_invoice: idInvoice,
+        id_pelanggan: inv?.idPelanggan || '',
+        bulan: inv?.bulan || 'Maret 2026',
+        nominal: inv?.nominal || 0,
+        admin: 'Petugas Loket DLH',
+      };
+
+      const res = await fetch(`${API_BASE_URL}/pembayaran`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setPaySuccessMsg('Pembayaran berhasil dikonfirmasi dan status invoice telah LUNAS!');
+        showToast('Pembayaran berhasil dikonfirmasi!', 'success');
+        await loadInvoices();
+        setTimeout(() => {
+          setPayModalData(null);
+          setPaySuccessMsg('');
+        }, 1500);
+      } else {
+        showToast('Gagal mengonfirmasi pembayaran pada server', 'error');
+      }
+    } catch (err) {
+      console.error('Error confirming payment:', err);
+      showToast('Gagal terhubung ke server backend', 'error');
+    } finally {
+      setIsProcessingPay(false);
+    }
+  };
+
+  const handleGenerateInvoices = async () => {
     setIsGenerating(true);
     setGenSuccessMsg('');
-    setTimeout(() => {
-      const newBatch: InvoiceRow[] = [
-        { idInvoice: `INV-2604-JGY0101001`, idPelanggan: 'JGY0101001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: genTahun, bulan: genBulan, nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-        { idInvoice: `INV-2604-JGT0203002`, idPelanggan: 'JGT0203002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: genTahun, bulan: genBulan, nominal: 25000, status: 'Belum Lunas', penerima: '-' },
-        { idInvoice: `INV-2604-RGT0102003`, idPelanggan: 'RGT0102003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: genTahun, bulan: genBulan, nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-      ];
-      setInvoices((prev) => [...newBatch, ...prev]);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`${API_BASE_URL}/tagihan/generate-massal`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ bulan: genBulan, tahun: genTahun }),
+      });
+
+      if (res.ok) {
+        const result = await res.json();
+        setGenSuccessMsg(result.message || `Berhasil menerbitkan tagihan retribusi untuk periode ${genBulan}!`);
+        showToast(result.message || `Berhasil menerbitkan tagihan retribusi ${genBulan}!`, 'success');
+        await loadInvoices();
+      } else {
+        showToast('Gagal menerbitkan tagihan massal', 'error');
+      }
+    } catch (err) {
+      console.error('Error generating mass invoices:', err);
+      showToast('Gagal terhubung ke server backend', 'error');
+    } finally {
       setIsGenerating(false);
-      setGenSuccessMsg(`Berhasil menerbitkan 3 tagihan retribusi untuk periode ${genBulan}!`);
-    }, 800);
+    }
   };
 
   return (
@@ -319,60 +403,100 @@ export default function TagihanAdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--color-ink-100)] text-[var(--color-ink-700)]">
-              {filteredInvoices.map((item) => {
-                const isLunas = item.status === 'Lunas';
-                return (
-                  <tr key={item.idInvoice} className="hover:bg-[var(--color-ink-50)] transition-colors">
-                    <td className="p-4">
-                      <span className="font-mono-id px-2.5 py-1 rounded-md bg-[var(--color-brand-wash)] text-[var(--color-brand-deep)] font-bold text-xs border border-[var(--color-brand-light)]/20">
-                        {item.idPelanggan}
-                      </span>
-                    </td>
-                    <td className="p-4 font-bold text-[var(--color-ink-900)]">{item.nama}</td>
-                    <td className="p-4 text-xs font-semibold">{item.rt}</td>
-                    <td className="p-4 text-xs font-semibold">{item.rw}</td>
-                    <td className="p-4">{item.tahun}</td>
-                    <td className="p-4">{item.bulan}</td>
-                    <td className="p-4 font-semibold">Rp {item.nominal.toLocaleString('id-ID')}</td>
-                    <td className="p-4 text-center">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                          isLunas
-                            ? 'bg-[var(--color-success-bg)] text-[var(--color-success)] border border-[var(--color-success)]/20'
-                            : 'bg-[var(--color-danger-bg)] text-[var(--color-danger)] border border-[var(--color-danger)]/20'
-                        }`}
-                      >
-                        {isLunas ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {!isLunas && (
-                          <button
-                            onClick={() => setPayModalData(item)}
-                            className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
-                            title="Proses Bayar / Tampilkan QRIS"
-                          >
-                            <DollarSign className="w-4 h-4" />
-                          </button>
-                        )}
-                        {isLunas && (
-                          <button
-                            onClick={() => handleTriggerSingleReceiptPrint(item)}
-                            className="p-1.5 rounded-lg bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors"
-                            title="Cetak Kuitansi Resmi"
-                          >
-                            <Printer className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filteredInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="p-12 text-center text-xs text-[var(--color-ink-500)] bg-[var(--color-ink-50)]/50">
+                    <div className="max-w-sm mx-auto space-y-2">
+                      <p className="font-bold text-[var(--color-ink-900)] text-sm">Belum Ada Data Tagihan</p>
+                      <p className="text-[11px] text-[var(--color-ink-500)]">
+                        Database tagihan saat ini masih kosong. Anda dapat mengklik tombol <span className="font-bold text-[var(--color-brand-deep)]">&quot;Terbitkan Tagihan Bulanan&quot;</span> di atas untuk memproses iuran retribusi seluruh Wajib Retribusi.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedInvoices.map((item) => {
+                  const isLunas = item.status === 'Lunas';
+                  return (
+                    <tr key={item.idInvoice} className="hover:bg-[var(--color-ink-50)] transition-colors">
+                      <td className="p-4">
+                        <span className="font-mono-id px-2.5 py-1 rounded-md bg-[var(--color-brand-wash)] text-[var(--color-brand-deep)] font-bold text-xs border border-[var(--color-brand-light)]/20">
+                          {item.idPelanggan}
+                        </span>
+                      </td>
+                      <td className="p-4 font-bold text-[var(--color-ink-900)]">{item.nama}</td>
+                      <td className="p-4 text-xs font-semibold">{item.rt}</td>
+                      <td className="p-4 text-xs font-semibold">{item.rw}</td>
+                      <td className="p-4">{item.tahun}</td>
+                      <td className="p-4">{item.bulan}</td>
+                      <td className="p-4 font-semibold">Rp {item.nominal.toLocaleString('id-ID')}</td>
+                      <td className="p-4 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            isLunas
+                              ? 'bg-[var(--color-success-bg)] text-[var(--color-success)] border border-[var(--color-success)]/20'
+                              : 'bg-[var(--color-danger-bg)] text-[var(--color-danger)] border border-[var(--color-danger)]/20'
+                          }`}
+                        >
+                          {isLunas ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {!isLunas && (
+                            <button
+                              onClick={() => setPayModalData(item)}
+                              className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
+                              title="Proses Bayar / Tampilkan QRIS"
+                            >
+                              <DollarSign className="w-4 h-4" />
+                            </button>
+                          )}
+                          {isLunas && (
+                            <button
+                              onClick={() => handleTriggerSingleReceiptPrint(item)}
+                              className="p-1.5 rounded-lg bg-teal-50 text-teal-600 hover:bg-teal-100 transition-colors"
+                              title="Cetak Kuitansi Resmi"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Bar */}
+        <div className="p-4 border-t border-[var(--color-ink-100)] bg-[var(--color-ink-50)] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[var(--color-ink-500)]">
+          <div>
+            Menampilkan <span className="font-bold text-[var(--color-ink-900)]">{filteredInvoices.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> - <span className="font-bold text-[var(--color-ink-900)]">{Math.min(currentPage * itemsPerPage, filteredInvoices.length)}</span> dari <span className="font-bold text-[var(--color-ink-900)]">{filteredInvoices.length.toLocaleString('id-ID')}</span> tagihan
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="p-2 rounded-lg border border-[var(--color-ink-300)] bg-white disabled:opacity-40 hover:bg-[var(--color-ink-50)]"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="font-semibold text-[var(--color-ink-900)] px-2">
+              Halaman {currentPage} dari {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="p-2 rounded-lg border border-[var(--color-ink-300)] bg-white disabled:opacity-40 hover:bg-[var(--color-ink-50)]"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -545,7 +669,7 @@ export default function TagihanAdminPage() {
                     return months.map((m, idx) => {
                       const isPast = selYear < curYear || (selYear === curYear && idx < curMonth);
                       return (
-                        <option key={m} value={`${m} ${genTahun}`} disabled={isPast}>
+                        <option key={m} value={m} disabled={isPast}>
                           {m} {genTahun} {isPast ? '(Masa Lalu - Terkunci)' : ''}
                         </option>
                       );
@@ -695,6 +819,13 @@ export default function TagihanAdminPage() {
           </div>
         </div>
       )}
+      {/* Toast and Confirmation Modal */}
+      <ToastConfirmModal
+        toasts={toasts}
+        onDismissToast={dismissToast}
+        confirmState={confirmState}
+        onCloseConfirm={closeConfirm}
+      />
     </div>
   );
 }

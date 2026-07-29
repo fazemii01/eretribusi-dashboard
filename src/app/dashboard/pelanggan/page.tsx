@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Plus, Download, Printer, Edit, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
+import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
+import { useToastConfirm } from '@/hooks/useToastConfirm';
 
 interface Pelanggan {
   id: string;
@@ -42,32 +44,34 @@ export default function PelangganPage() {
   const [formHp, setFormHp] = useState('');
 
   const [livePelanggan, setLivePelanggan] = useState<Pelanggan[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/pelanggan`);
+      if (res.ok) {
+        const data = await res.json();
+        const rawList = Array.isArray(data) ? data : data.data || [];
+        setLivePelanggan(
+          rawList.map((p: any) => ({
+            id: p.id_pelanggan,
+            nama: p.nama,
+            alamat: p.alamat,
+            rt: p.rt || '01',
+            rw: p.rw || '01',
+            kelurahan: p.kelurahan,
+            kecamatan: p.kecamatan,
+            va: p.va,
+            noHp: p.no_hp || '-',
+          })),
+        );
+      }
+    } catch (err) {
+      console.error('Failed to load pelanggan API:', err);
+    }
+  };
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/pelanggan`);
-        if (res.ok) {
-          const data = await res.json();
-          const rawList = Array.isArray(data) ? data : data.data || [];
-          setLivePelanggan(
-            rawList.map((p: any) => ({
-              id: p.id_pelanggan,
-              nama: p.nama,
-              alamat: p.alamat,
-              rt: p.rt || '01',
-              rw: p.rw || '01',
-              kelurahan: p.kelurahan,
-              kecamatan: p.kecamatan,
-              va: p.va,
-              noHp: p.no_hp || '-',
-            })),
-          );
-        }
-      } catch (err) {
-        console.error('Failed to load pelanggan API:', err);
-      }
-    }
     loadData();
   }, []);
 
@@ -97,12 +101,12 @@ export default function PelangganPage() {
       setSelectedItem(item);
       setFormNama(item.nama);
       setFormAlamat(item.alamat);
-      setFormRt(item.rt);
-      setFormRw(item.rw);
-      setFormKel(item.kelurahan);
-      setFormKec(item.kecamatan);
+      setFormRt(item.rt || '01');
+      setFormRw(item.rw || '01');
+      setFormKel(item.kelurahan || 'Jogoyudan');
+      setFormKec(item.kecamatan || 'Lumajang');
       setFormVa(item.va.toString());
-      setFormHp(item.noHp);
+      setFormHp(item.noHp || '');
     } else {
       setSelectedItem(null);
       setFormNama('');
@@ -115,6 +119,84 @@ export default function PelangganPage() {
       setFormHp('');
     }
     setModalOpen(true);
+  };
+
+  const { toasts, showToast, dismissToast, confirmState, confirmAction, closeConfirm } = useToastConfirm();
+
+  const handleSavePelanggan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const payload = {
+        id_pelanggan: selectedItem ? selectedItem.id : undefined,
+        nama: formNama,
+        alamat: formAlamat,
+        rt: formRt || '01',
+        rw: formRw || '01',
+        kelurahan: formKel,
+        kecamatan: formKec,
+        va: Number(formVa),
+        no_hp: formHp || '-',
+      };
+
+      const res = await fetch(`${API_BASE_URL}/pelanggan`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setModalOpen(false);
+        showToast('Data Wajib Retribusi berhasil disimpan!', 'success');
+        await loadData();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(`Gagal menyimpan data: ${err.message || 'Terjadi kesalahan'}`, 'error');
+      }
+    } catch (err) {
+      console.error('Error saving pelanggan:', err);
+      showToast('Gagal terhubung ke server backend', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeletePelanggan = (id: string, nama: string) => {
+    confirmAction({
+      title: 'Hapus Data Wajib Retribusi',
+      message: `Apakah Anda yakin ingin menghapus data Wajib Retribusi "${nama}"? Semua tagihan terkait juga akan dihapus.`,
+      itemId: id,
+      itemNama: nama,
+      confirmText: 'Ya, Hapus Wajib Retribusi',
+      onConfirm: async () => {
+        try {
+          const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+          const headers: Record<string, string> = {};
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+
+          const res = await fetch(`${API_BASE_URL}/pelanggan/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers,
+          });
+
+          if (res.ok) {
+            showToast(`Pelanggan "${nama}" berhasil dihapus!`, 'success');
+            await loadData();
+          } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(`Gagal menghapus data: ${err.message || 'Terjadi kesalahan'}`, 'error');
+          }
+        } catch (err) {
+          console.error('Error deleting pelanggan:', err);
+          showToast('Gagal terhubung ke server backend', 'error');
+        }
+      },
+    });
   };
 
   const handleTriggerPrintReport = () => {
@@ -319,6 +401,7 @@ export default function PelangganPage() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => handleDeletePelanggan(item.id, item.nama)}
                         className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
                         title="Hapus Data"
                       >
@@ -388,11 +471,11 @@ export default function PelangganPage() {
                 <tr>
                   <th className="p-2 border border-slate-400 text-center w-10">No</th>
                   <th className="p-2 border border-slate-400 whitespace-nowrap">ID Wajib Retribusi</th>
-                  <th className="p-2 border border-slate-400">Nama Kepala Keluarga</th>
+                  <th className="p-2 border border-slate-400">Nama</th>
                   <th className="p-2 border border-slate-400">Alamat</th>
-                  <th className="p-2 border border-slate-400 text-center whitespace-nowrap">RT / RW</th>
+                  <th className="p-2 border border-slate-400 text-center">RT/RW</th>
                   <th className="p-2 border border-slate-400">Kelurahan</th>
-                  <th className="p-2 border border-slate-400 text-right whitespace-nowrap">Daya (VA)</th>
+                  <th className="p-2 border border-slate-400 text-right">Daya</th>
                 </tr>
               </thead>
               <tbody>
@@ -436,10 +519,7 @@ export default function PelangganPage() {
             </div>
 
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setModalOpen(false);
-              }}
+              onSubmit={handleSavePelanggan}
               className="space-y-4"
             >
               <div>
@@ -631,20 +711,61 @@ export default function PelangganPage() {
                   accept=".csv"
                   className="hidden"
                   id="csv-file-input"
-                  onChange={(e) => {
+                  disabled={csvUploading}
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
-                    if (file) {
-                      setCsvUploading(true);
-                      setTimeout(() => {
-                        setCsvUploading(false);
-                        setCsvResultMsg(`Berhasil mengimpor data pelanggan dari file "${file.name}"!`);
-                      }, 1000);
+                    if (!file) return;
+                    setCsvUploading(true);
+                    setCsvResultMsg('Mengunggah dan memproses CSV...');
+                    try {
+                      const text = await file.text();
+                      const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+                      if (lines.length <= 1) {
+                        setCsvResultMsg('File CSV kosong atau hanya berisi header.');
+                        return;
+                      }
+
+                      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+                      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                      let insertedCount = 0;
+                      for (let i = 1; i < lines.length; i++) {
+                        const cols = lines[i].split(',').map((c) => c.trim().replace(/^"|"$/g, ''));
+                        if (cols.length >= 2 && cols[0]) {
+                          const payload = {
+                            nama: cols[0],
+                            alamat: cols[1] || 'Jl. Lumajang',
+                            rt: cols[2] || '01',
+                            rw: cols[3] || '01',
+                            kelurahan: cols[4] || 'Jogoyudan',
+                            kecamatan: cols[5] || 'Lumajang',
+                            va: parseInt(cols[6]) || 900,
+                            no_hp: cols[7] || '-',
+                          };
+                          const res = await fetch(`${API_BASE_URL}/pelanggan`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify(payload),
+                          });
+                          if (res.ok) insertedCount++;
+                        }
+                      }
+                      setCsvResultMsg(`Berhasil mengimpor ${insertedCount} Wajib Retribusi ke database!`);
+                      await loadData();
+                    } catch (err) {
+                      console.error('Error importing CSV:', err);
+                      setCsvResultMsg('Gagal memproses file CSV.');
+                    } finally {
+                      setCsvUploading(false);
                     }
                   }}
                 />
                 <label htmlFor="csv-file-input" className="cursor-pointer block space-y-2">
                   <Download className="w-8 h-8 text-[var(--color-brand-mid)] mx-auto rotate-180" />
-                  <p className="text-xs font-bold text-gray-700">Pilih atau Drag File CSV ke Sini</p>
+                  <p className="text-xs font-bold text-gray-700">
+                    {csvUploading ? 'Sedang Mengunggah...' : 'Pilih atau Drag File CSV ke Sini'}
+                  </p>
                   <p className="text-[10px] text-gray-400">Format .csv (Maksimal 10.000 baris)</p>
                 </label>
               </div>
@@ -670,6 +791,13 @@ export default function PelangganPage() {
           </div>
         </div>
       )}
+      {/* Toast and Confirmation Modal */}
+      <ToastConfirmModal
+        toasts={toasts}
+        onDismissToast={dismissToast}
+        confirmState={confirmState}
+        onCloseConfirm={closeConfirm}
+      />
     </div>
   );
 }

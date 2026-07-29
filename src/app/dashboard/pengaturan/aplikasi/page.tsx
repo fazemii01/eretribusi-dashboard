@@ -1,9 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save, Upload, CheckCircle2, Image as ImageIcon, Phone, Globe } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/api';
+import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
+import { useToastConfirm } from '@/hooks/useToastConfirm';
 
 export default function PengaturanAplikasiPage() {
+  const { toasts, showToast, dismissToast, confirmState, confirmAction, closeConfirm } = useToastConfirm();
+
   const [appName, setAppName] = useState('E-Retribusi DLH Lumajang');
   const [waCs, setWaCs] = useState('6281234567890');
   const [berandaTitle, setBerandaTitle] = useState('Sistem E-Retribusi Pelayanan Kebersihan & Sampah');
@@ -13,10 +18,51 @@ export default function PengaturanAplikasiPage() {
   const [faviconPreview, setFaviconPreview] = useState('/logo-dlh.png');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    async function loadPengaturan() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/pengaturan`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            if (data.no_wa_admin) setWaCs(data.no_wa_admin);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load pengaturan API:', err);
+      }
+    }
+    loadPengaturan();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccessMsg('Pengaturan Aplikasi berhasil diperbarui!');
-    setTimeout(() => setSuccessMsg(''), 3000);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const payload = {
+        no_wa_admin: waCs,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/pengaturan`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        setSuccessMsg('Pengaturan Aplikasi berhasil disimpan ke database!');
+        showToast('Pengaturan Aplikasi berhasil disimpan!', 'success');
+        setTimeout(() => setSuccessMsg(''), 4000);
+      } else {
+        showToast('Gagal menyimpan pengaturan aplikasi', 'error');
+      }
+    } catch (err) {
+      console.error('Error saving pengaturan:', err);
+      showToast('Gagal terhubung ke server backend', 'error');
+    }
   };
 
   return (
@@ -180,6 +226,13 @@ export default function PengaturanAplikasiPage() {
           Simpan Seluruh Pengaturan
         </button>
       </form>
+      {/* Toast and Confirmation Modal */}
+      <ToastConfirmModal
+        toasts={toasts}
+        onDismissToast={dismissToast}
+        confirmState={confirmState}
+        onCloseConfirm={closeConfirm}
+      />
     </div>
   );
 }
