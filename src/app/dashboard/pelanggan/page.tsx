@@ -41,61 +41,6 @@ export default function PelangganPage() {
   const [formVa, setFormVa] = useState('900');
   const [formHp, setFormHp] = useState('');
 
-  // Generate 1,050 Data Pelanggan for all 7 Kelurahan
-  const allPelanggan = useMemo(() => {
-    const staticData = [
-      { id: 'LMJ-JGY-0001', nama: 'Budi Santoso', rt: '01', rw: '01', kelurahan: 'Jogoyudan', kecamatan: 'Lumajang', va: 900, noHp: '628123456789', alamat: 'Jl. Mawar No 10' },
-      { id: 'LMJ-JGT-0002', nama: 'Siti Aminah', rt: '03', rw: '02', kelurahan: 'Jogotrunan', kecamatan: 'Lumajang', va: 1300, noHp: '628198765432', alamat: 'Jl. Melati No 4' },
-      { id: 'LMJ-RGT-0003', nama: 'Agus Setiawan', rt: '02', rw: '01', kelurahan: 'Rogotrunan', kecamatan: 'Lumajang', va: 450, noHp: '628134567890', alamat: 'Jl. Dahlia No 12' },
-      { id: 'LMJ-CTR-0001', nama: 'Rina Wijaya', rt: '01', rw: '04', kelurahan: 'Citrodiwangsan', kecamatan: 'Lumajang', va: 2200, noHp: '628176543210', alamat: 'Jl. Anggrek No 8' },
-    ];
-    const kelMap = [
-      { kode: 'JGY', nama: 'Jogoyudan', street: 'Jl. Mawar' },
-      { kode: 'JGT', nama: 'Jogotrunan', street: 'Jl. Melati' },
-      { kode: 'RGT', nama: 'Rogotrunan', street: 'Jl. Dahlia' },
-      { kode: 'CTR', nama: 'Citrodiwangsan', street: 'Jl. Gajah Mada' },
-      { kode: 'TMP', nama: 'Tompokersan', street: 'Jl. Ahmad Yani' },
-      { kode: 'KPH', nama: 'Kepuharjo', street: 'Jl. HOS Cokroaminoto' },
-      { kode: 'DTR', nama: 'Ditotrunan', street: 'Jl. Veteran' },
-    ];
-    const sampleFirstNames = ['Budi', 'Siti', 'Agus', 'Dewi', 'Eko', 'Rina', 'Joko', 'Sri', 'Bambang', 'Heni', 'Hadi', 'Lilis', 'Dedi', 'Yuni', 'Supardi', 'Neneng', 'Slamet', 'Titin'];
-    const sampleLastNames = ['Santoso', 'Aminah', 'Setiawan', 'Lestari', 'Prasetyo', 'Wati', 'Susilo', 'Rahayu', 'Hidayat', 'Mulyani', 'Kusuma', 'Utami', 'Firmansyah', 'Suryani'];
-    const vaOptions = [450, 900, 1300, 2200];
-
-    const list: Pelanggan[] = [];
-    let seq = 1;
-
-    for (const kel of kelMap) {
-      let kelSeq = 1;
-      for (let rw = 1; rw <= 5; rw++) {
-        for (let rt = 1; rt <= 6; rt++) {
-          for (let count = 1; count <= 5; count++) {
-            const rtStr = rt.toString().padStart(2, '0');
-            const rwStr = rw.toString().padStart(2, '0');
-            const seqStr = ('000' + kelSeq).slice(-4);
-            const fn = sampleFirstNames[(seq * 3) % sampleFirstNames.length];
-            const ln = sampleLastNames[(seq * 7) % sampleLastNames.length];
-
-            list.push({
-              id: `LMJ-${kel.kode}-${seqStr}`,
-              nama: `${fn} ${ln}`,
-              alamat: `${kel.street} No. ${count * 3}`,
-              rt: rtStr,
-              rw: rwStr,
-              kelurahan: kel.nama,
-              kecamatan: 'Lumajang',
-              va: vaOptions[seq % vaOptions.length],
-              noHp: `6281234${seq.toString().padStart(5, '0')}`,
-            });
-            seq++;
-            kelSeq++;
-          }
-        }
-      }
-    }
-    return list;
-  }, []);
-
   const [livePelanggan, setLivePelanggan] = useState<Pelanggan[]>([]);
 
   useEffect(() => {
@@ -104,30 +49,29 @@ export default function PelangganPage() {
         const res = await fetch(`${API_BASE_URL}/pelanggan`);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setLivePelanggan(
-              data.map((p: any) => ({
-                id: p.id_pelanggan,
-                nama: p.nama,
-                alamat: p.alamat,
-                rt: p.rt || '01',
-                rw: p.rw || '01',
-                kelurahan: p.kelurahan,
-                kecamatan: p.kecamatan,
-                va: p.va,
-                noHp: p.no_hp,
-              })),
-            );
-          }
+          const rawList = Array.isArray(data) ? data : data.data || [];
+          setLivePelanggan(
+            rawList.map((p: any) => ({
+              id: p.id_pelanggan,
+              nama: p.nama,
+              alamat: p.alamat,
+              rt: p.rt || '01',
+              rw: p.rw || '01',
+              kelurahan: p.kelurahan,
+              kecamatan: p.kecamatan,
+              va: p.va,
+              noHp: p.no_hp || '-',
+            })),
+          );
         }
       } catch (err) {
-        console.log('Using local fallback customer records');
+        console.error('Failed to load pelanggan API:', err);
       }
     }
     loadData();
   }, []);
 
-  const displayData = livePelanggan.length > 0 ? livePelanggan : allPelanggan;
+  const displayData = livePelanggan;
 
   const filteredData = useMemo(() => {
     return displayData.filter((item) => {

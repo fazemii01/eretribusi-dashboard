@@ -12,31 +12,12 @@ export default function DashboardStatistik() {
   const [loading, setLoading] = useState(false);
 
   const [statsData, setStatsData] = useState({
-    totalLunas: 240200000,
-    totalTunggakan: 12450000,
-    totalPelanggan: 1050,
-    kepatuhan: 95,
-    chartData: [
-      { bulan: 'Jan', lunas: 15000000, tunggakan: 2500000 },
-      { bulan: 'Feb', lunas: 16200000, tunggakan: 1800000 },
-      { bulan: 'Mar', lunas: 18000000, tunggakan: 1200000 },
-      { bulan: 'Apr', lunas: 17500000, tunggakan: 1500000 },
-      { bulan: 'Mei', lunas: 19000000, tunggakan: 900000 },
-      { bulan: 'Jun', lunas: 21000000, tunggakan: 800000 },
-      { bulan: 'Jul', lunas: 20500000, tunggakan: 1100000 },
-      { bulan: 'Agu', lunas: 22000000, tunggakan: 600000 },
-      { bulan: 'Sep', lunas: 21500000, tunggakan: 750000 },
-      { bulan: 'Okt', lunas: 23000000, tunggakan: 500000 },
-      { bulan: 'Nov', lunas: 22500000, tunggakan: 600000 },
-      { bulan: 'Des', lunas: 24000000, tunggakan: 400000 },
-    ],
-    recentPayments: [
-      { waktu: '14:20:05', nama: 'Budi Santoso', bulan: 'Maret 2026', nominal: 15000, admin: 'Admin DLH' },
-      { waktu: '13:45:12', nama: 'Siti Aminah', bulan: 'Maret 2026', nominal: 25000, admin: 'Admin DLH' },
-      { waktu: '11:10:44', nama: 'Agus Setiawan', bulan: 'Maret 2026', nominal: 15000, admin: 'Petugas Loket' },
-      { waktu: '09:30:18', nama: 'Rina Wijaya', bulan: 'Februari 2026', nominal: 35000, admin: 'Admin DLH' },
-      { waktu: '08:15:00', nama: 'Eko Prasetyo', bulan: 'Maret 2026', nominal: 15000, admin: 'Petugas Loket' },
-    ],
+    totalLunas: 0,
+    totalTunggakan: 0,
+    totalPelanggan: 0,
+    kepatuhan: 0,
+    chartData: [],
+    recentPayments: [],
   });
 
   useEffect(() => {
@@ -46,13 +27,19 @@ export default function DashboardStatistik() {
         const res = await fetch(`${API_BASE_URL}/tagihan/stats?tahun=${selectedYear}`);
         if (res.ok) {
           const data = await res.json();
-          if (data && data.chartData) {
-            setStatsData(data);
+          if (data) {
+            setStatsData({
+              totalLunas: Number(data.totalLunas) || 0,
+              totalTunggakan: Number(data.totalTunggakan) || 0,
+              totalPelanggan: Number(data.totalPelanggan) || 0,
+              kepatuhan: Number(data.kepatuhan) || 0,
+              chartData: data.chartData || [],
+              recentPayments: data.recentPayments || [],
+            });
           }
         }
       } catch (err) {
-        // Fallback to default mock stats if backend server isn't running locally yet
-        console.log('Using default dashboard statistics mock data');
+        console.error('Failed to load dashboard stats API:', err);
       } finally {
         setLoading(false);
       }

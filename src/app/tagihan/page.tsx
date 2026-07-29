@@ -36,44 +36,43 @@ export default function TagihanPage() {
   const [selectedQris, setSelectedQris] = useState<InvoiceItem | null>(null);
   const [showPrintStatement, setShowPrintStatement] = useState(false);
 
-  const mockCekTagihan = (id: string) => {
+  const handleCekTagihan = async (id: string) => {
     if (!id.trim()) {
       setErrorMsg('Silakan masukkan ID Wajib Retribusi terlebih dahulu');
       return;
     }
     setLoading(true);
     setErrorMsg('');
+    setPelanggan(null);
+    setTagihan([]);
 
-    setTimeout(() => {
-      setPelanggan({
-        id_pelanggan: id.toUpperCase(),
-        nama: 'Budi Santoso',
-        alamat: 'Jl. Mawar No 10',
-        rt: '01',
-        rw: '01',
-        kelurahan: 'Jogoyudan',
-        kecamatan: 'Lumajang',
-        va: 900,
-      });
-
-      setTagihan([
-        {
-          invoice: `INV-2603-${id.toUpperCase()}`,
-          bulan: 'Maret 2026',
-          nominal: 15000,
-          status: 'Belum Lunas',
-          qris_payload: `00020101021226670016ID.GOV.DLH.LUMAJANG011893600914000000000002155204939953033605405150005802ID5912DLH LUMAJANG6008LUMAJANG61056731162190715INV-2603-${id.toUpperCase()}6304ABCD`,
-        },
-        {
-          invoice: `INV-2602-${id.toUpperCase()}`,
-          bulan: 'Februari 2026',
-          nominal: 15000,
-          status: 'Lunas',
-          qris_payload: `00020101021226670016ID.GOV.DLH.LUMAJANG011893600914000000000002155204939953033605405150005802ID5912DLH LUMAJANG6008LUMAJANG61056731162190715INV-2602-${id.toUpperCase()}6304ABCD`,
-        },
-      ]);
+    try {
+      const res = await fetch(`${API_BASE_URL}/tagihan/public?id=${encodeURIComponent(id.trim())}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.pelanggan) {
+          setPelanggan({
+            id_pelanggan: data.pelanggan.id_pelanggan,
+            nama: data.pelanggan.nama,
+            alamat: data.pelanggan.alamat,
+            rt: data.pelanggan.rt || '01',
+            rw: data.pelanggan.rw || '01',
+            kelurahan: data.pelanggan.kelurahan,
+            kecamatan: data.pelanggan.kecamatan,
+            va: data.pelanggan.va,
+          });
+          setTagihan(data.tagihan || []);
+        } else {
+          setErrorMsg(`ID Wajib Retribusi "${id}" tidak ditemukan dalam database.`);
+        }
+      } else {
+        setErrorMsg('Gagal terhubung ke server backend.');
+      }
+    } catch (err) {
+      setErrorMsg('Gagal terhubung ke server. Pastikan backend aktif.');
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   const handlePrintStatement = () => {
@@ -108,7 +107,7 @@ export default function TagihanPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              mockCekTagihan(inputId);
+              handleCekTagihan(inputId);
             }}
             className="space-y-4"
           >

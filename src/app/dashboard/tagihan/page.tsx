@@ -59,21 +59,38 @@ export default function TagihanAdminPage() {
   const [genSuccessMsg, setGenSuccessMsg] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const [invoices, setInvoices] = useState<InvoiceRow[]>([
-    { idInvoice: 'INV-2601-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Januari 2026', nominal: 15000, status: 'Lunas', penerima: 'Admin DLH' },
-    { idInvoice: 'INV-2602-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Februari 2026', nominal: 15000, status: 'Lunas', penerima: 'Admin DLH' },
-    { idInvoice: 'INV-2603-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Maret 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2604-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'April 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2605-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Mei 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2606-LMJ-JGY-0001', idPelanggan: 'LMJ-JGY-0001', nama: 'Budi Santoso', alamat: 'Jl. Mawar No 10', rt: '01', rw: '01', tahun: '2026', bulan: 'Juni 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
 
-    { idInvoice: 'INV-2607-LMJ-JGT-0002', idPelanggan: 'LMJ-JGT-0002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: '2026', bulan: 'Juli 2026', nominal: 25000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2608-LMJ-JGT-0002', idPelanggan: 'LMJ-JGT-0002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: '2026', bulan: 'Agustus 2026', nominal: 25000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2609-LMJ-JGT-0002', idPelanggan: 'LMJ-JGT-0002', nama: 'Siti Aminah', alamat: 'Jl. Melati No 4', rt: '03', rw: '02', tahun: '2026', bulan: 'September 2026', nominal: 25000, status: 'Lunas', penerima: 'Bank SNAP Gateway' },
-    { idInvoice: 'INV-2610-LMJ-RGT-0003', idPelanggan: 'LMJ-RGT-0003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: '2026', bulan: 'Oktober 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2611-LMJ-RGT-0003', idPelanggan: 'LMJ-RGT-0003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: '2026', bulan: 'November 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-    { idInvoice: 'INV-2612-LMJ-RGT-0003', idPelanggan: 'LMJ-RGT-0003', nama: 'Agus Setiawan', alamat: 'Jl. Dahlia No 12', rt: '02', rw: '01', tahun: '2026', bulan: 'Desember 2026', nominal: 15000, status: 'Belum Lunas', penerima: '-' },
-  ]);
+  // Fetch live tagihan data from backend API
+  useEffect(() => {
+    async function loadInvoices() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/tagihan`);
+        if (res.ok) {
+          const data = await res.json();
+          const rawList = Array.isArray(data) ? data : data.data || [];
+          setInvoices(
+            rawList.map((inv: any) => ({
+              idInvoice: inv.id_invoice,
+              idPelanggan: inv.id_pelanggan,
+              nama: inv.pelanggan?.nama || inv.id_pelanggan,
+              alamat: inv.pelanggan?.alamat || '-',
+              rt: inv.pelanggan?.rt || '01',
+              rw: inv.pelanggan?.rw || '01',
+              tahun: inv.bulan ? inv.bulan.split(' ').pop() || '2026' : '2026',
+              bulan: inv.bulan,
+              nominal: Number(inv.nominal),
+              status: inv.status === 'lunas' ? 'Lunas' : 'Belum Lunas',
+              penerima: inv.penerima || '-',
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load tagihan API:', err);
+      }
+    }
+    loadInvoices();
+  }, []);
 
   const filteredInvoices = useMemo(() => {
     return invoices

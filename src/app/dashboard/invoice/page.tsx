@@ -24,62 +24,39 @@ export default function InvoiceReceiptPage() {
   const [filterBulan, setFilterBulan] = useState('');
   const [printReceiptData, setPrintReceiptData] = useState<ReceiptRow | null>(null);
 
-  const mockReceipts: ReceiptRow[] = [
-    {
-      idKuitansi: 'PAY-INV-2602-LMJ-JGY-0001',
-      idInvoice: 'INV-2602-LMJ-JGY-0001',
-      idPelanggan: 'LMJ-JGY-0001',
-      nama: 'Budi Santoso',
-      alamat: 'Jl. Mawar No 10 (RT 01 / RW 01)',
-      waktuBayar: '14:20:05 15/02/2026',
-      bulan: 'Februari 2026',
-      tahun: '2026',
-      nominal: 15000,
-      admin: 'Budi Santoso, S.E.',
-      kanal: 'Loket Tunai DLH',
-    },
-    {
-      idKuitansi: 'PAY-INV-2603-LMJ-JGT-0002',
-      idInvoice: 'INV-2603-LMJ-JGT-0002',
-      idPelanggan: 'LMJ-JGT-0002',
-      nama: 'Siti Aminah',
-      alamat: 'Jl. Melati No 4 (RT 03 / RW 02)',
-      waktuBayar: '09:12:40 02/03/2026',
-      bulan: 'Maret 2026',
-      tahun: '2026',
-      nominal: 25000,
-      admin: 'Bank SNAP Gateway',
-      kanal: 'Bank Jatim QRIS',
-    },
-    {
-      idKuitansi: 'PAY-INV-2603-LMJ-CTR-0001',
-      idInvoice: 'INV-2603-LMJ-CTR-0001',
-      idPelanggan: 'LMJ-CTR-0001',
-      nama: 'Rina Wijaya',
-      alamat: 'Jl. Anggrek No 8 (RT 01 / RW 04)',
-      waktuBayar: '11:45:12 10/03/2026',
-      bulan: 'Maret 2026',
-      tahun: '2026',
-      nominal: 35000,
-      admin: 'Bank SNAP Gateway',
-      kanal: 'Gopay QRIS',
-    },
-    {
-      idKuitansi: 'PAY-INV-2601-LMJ-JGY-0001',
-      idInvoice: 'INV-2601-LMJ-JGY-0001',
-      idPelanggan: 'LMJ-JGY-0001',
-      nama: 'Budi Santoso',
-      alamat: 'Jl. Mawar No 10 (RT 01 / RW 01)',
-      waktuBayar: '10:05:30 18/01/2026',
-      bulan: 'Januari 2026',
-      tahun: '2026',
-      nominal: 15000,
-      admin: 'Ahmad Fauzi',
-      kanal: 'Loket Tunai DLH',
-    },
-  ];
+  const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
 
-  const filteredReceipts = mockReceipts.filter((item) => {
+  useEffect(() => {
+    async function loadReceipts() {
+      try {
+        const res = await fetch(`${API_BASE_URL}/pembayaran`);
+        if (res.ok) {
+          const data = await res.json();
+          const rawList = Array.isArray(data) ? data : data.data || [];
+          setReceipts(
+            rawList.map((p: any) => ({
+              idKuitansi: p.id_kuitansi,
+              idInvoice: p.id_invoice,
+              idPelanggan: p.id_pelanggan,
+              nama: p.pelanggan?.nama || p.id_pelanggan,
+              alamat: p.pelanggan?.alamat ? `${p.pelanggan.alamat} (RT ${p.pelanggan.rt || '01'} / RW ${p.pelanggan.rw || '01'})` : '-',
+              waktuBayar: p.waktu_bayar ? new Date(p.waktu_bayar).toLocaleString('id-ID') : new Date(p.created_at || Date.now()).toLocaleString('id-ID'),
+              bulan: p.bulan,
+              tahun: p.bulan ? p.bulan.split(' ').pop() || '2026' : '2026',
+              nominal: Number(p.nominal),
+              admin: p.admin || 'Petugas DLH',
+              kanal: p.referensi_bank ? `Bank SNAP (Ref: ${p.referensi_bank})` : 'Loket Tunai DLH',
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to load pembayaran API:', err);
+      }
+    }
+    loadReceipts();
+  }, []);
+
+  const filteredReceipts = receipts.filter((item) => {
     const matchSearch =
       search === '' ||
       item.nama.toLowerCase().includes(search.toLowerCase()) ||
