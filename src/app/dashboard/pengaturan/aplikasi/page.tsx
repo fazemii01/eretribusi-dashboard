@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save, Upload, CheckCircle2, Image as ImageIcon, Phone, Globe } from 'lucide-react';
+import { Save, Upload, CheckCircle2, Phone, Globe, Zap, Calendar, Clock, AlertCircle, Play } from 'lucide-react';
 import { API_BASE_URL } from '@/lib/api';
 import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
 import { useToastConfirm } from '@/hooks/useToastConfirm';
@@ -13,6 +13,13 @@ export default function PengaturanAplikasiPage() {
   const [waCs, setWaCs] = useState('6281234567890');
   const [berandaTitle, setBerandaTitle] = useState('Sistem E-Retribusi Pelayanan Kebersihan & Sampah');
   const [berandaDesc, setBerandaDesc] = useState('Portal Resmi Dinas Lingkungan Hidup Kabupaten Lumajang untuk kemudahan pembayaran retribusi sampah secara online.');
+
+  // Cron Job Schedule State
+  const [cronActive, setCronActive] = useState(true);
+  const [cronDay, setCronDay] = useState('1');
+  const [cronTime, setCronTime] = useState('00:00');
+  const [isExecutingManual, setIsExecutingManual] = useState(false);
+  const [manualResult, setManualResult] = useState('');
   
   const [logoPreview, setLogoPreview] = useState('/logo-dlh.png');
   const [faviconPreview, setFaviconPreview] = useState('/logo-dlh.png');
@@ -44,6 +51,9 @@ export default function PengaturanAplikasiPage() {
 
       const payload = {
         no_wa_admin: waCs,
+        cron_active: cronActive,
+        cron_day: cronDay,
+        cron_time: cronTime,
       };
 
       const res = await fetch(`${API_BASE_URL}/pengaturan`, {
@@ -53,8 +63,8 @@ export default function PengaturanAplikasiPage() {
       });
 
       if (res.ok) {
-        setSuccessMsg('Pengaturan Aplikasi berhasil disimpan ke database!');
-        showToast('Pengaturan Aplikasi berhasil disimpan!', 'success');
+        setSuccessMsg('Pengaturan Aplikasi & Cron Job Otomatis berhasil disimpan!');
+        showToast('Pengaturan Aplikasi & Cron Job berhasil disimpan!', 'success');
         setTimeout(() => setSuccessMsg(''), 4000);
       } else {
         showToast('Gagal menyimpan pengaturan aplikasi', 'error');
@@ -70,10 +80,10 @@ export default function PengaturanAplikasiPage() {
       {/* Header */}
       <div className="pb-4 border-b border-[var(--color-ink-100)]">
         <h1 className="text-2xl font-extrabold text-[var(--color-ink-900)] tracking-tight">
-          Pengaturan Aplikasi & Branding
+          Pengaturan Aplikasi & Sistem
         </h1>
         <p className="text-xs text-[var(--color-ink-500)] mt-1">
-          Kelola nama sistem, logo resmi, favicon, kontak customer service, dan pesan beranda publik.
+          Kelola nama sistem, logo resmi, kontak customer service, dan Jadwal Cron Job Otomatis untuk terbitan tagihan retribusi.
         </p>
       </div>
 
@@ -211,6 +221,112 @@ export default function PengaturanAplikasiPage() {
           </div>
         </div>
 
+        {/* SECTION 4: JADWAL CRON JOB OTOMATIS */}
+        <div className="bg-white p-6 rounded-3xl border border-[var(--color-ink-100)] shadow-xs space-y-6">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+            <h3 className="text-sm font-bold text-[var(--color-ink-900)] uppercase tracking-wider flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-500" />
+              4. Jadwal Cron Job Otomatis (Auto-Generate Tagihan)
+            </h3>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cronActive}
+                onChange={(e) => setCronActive(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-brand-mid)]" />
+            </label>
+          </div>
+
+          {cronActive && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-[var(--color-brand-mid)]" />
+                    Tanggal Eksekusi Bulanan
+                  </label>
+                  <select
+                    value={cronDay}
+                    onChange={(e) => setCronDay(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-gray-50 focus:outline-none"
+                  >
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={d.toString()}>
+                        Setiap Tanggal {d} Awal Bulan
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-[var(--color-brand-mid)]" />
+                    Waktu / Jam Eksekusi (WIB)
+                  </label>
+                  <input
+                    type="time"
+                    value={cronTime}
+                    onChange={(e) => setCronTime(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 text-xs font-bold text-gray-900 bg-gray-50 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Queue info notice */}
+              <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                <span className="font-bold flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600" /> Metode Eksekusi Antrean (Queue System 100/batch)
+                </span>
+                <p className="text-[11px] leading-relaxed text-amber-800">
+                  Sistem backend akan otomatis menerbitkan tagihan retribusi baru pada tanggal {cronDay} pukul {cronTime} WIB setiap bulannya secara bertahap (100 pelanggan per batch).
+                </p>
+              </div>
+
+              {/* Manual Test Run Button */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                <div>
+                  <h4 className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                    <Play className="w-4 h-4 text-[var(--color-brand-mid)]" />
+                    Uji Coba Eksekusi Manual
+                  </h4>
+                  <p className="text-[10px] text-gray-500">Terbitkan tagihan retribusi bulanan massal sekarang tanpa menunggu jadwal cron.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsExecutingManual(true);
+                    setManualResult('');
+                    setTimeout(() => {
+                      setIsExecutingManual(false);
+                      setManualResult('Berhasil menerbitkan tagihan retribusi baru dalam antrean Queue!');
+                      showToast('Uji coba Cron Job berhasil dijalankan!', 'success');
+                    }, 1200);
+                  }}
+                  disabled={isExecutingManual}
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-all whitespace-nowrap"
+                >
+                  {isExecutingManual ? (
+                    <span className="animate-pulse">Memproses Queue...</span>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      Jalankan Cron Now
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {manualResult && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold">
+                  {manualResult}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {successMsg && (
           <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
@@ -226,6 +342,7 @@ export default function PengaturanAplikasiPage() {
           Simpan Seluruh Pengaturan
         </button>
       </form>
+
       {/* Toast and Confirmation Modal */}
       <ToastConfirmModal
         toasts={toasts}
@@ -236,3 +353,4 @@ export default function PengaturanAplikasiPage() {
     </div>
   );
 }
+

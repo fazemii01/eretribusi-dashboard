@@ -5,6 +5,7 @@ import { Search, Plus, Download, Printer, Edit, Trash2, X, ChevronLeft, ChevronR
 import { API_BASE_URL } from '@/lib/api';
 import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
 import { useToastConfirm } from '@/hooks/useToastConfirm';
+import KopSurat from '@/components/admin/KopSurat';
 
 interface Pelanggan {
   id: string;
@@ -44,6 +45,7 @@ export default function PelangganPage() {
   const [formHp, setFormHp] = useState('');
 
   const [livePelanggan, setLivePelanggan] = useState<Pelanggan[]>([]);
+  const [masterWilayahList, setMasterWilayahList] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadData = async () => {
@@ -71,9 +73,66 @@ export default function PelangganPage() {
     }
   };
 
+  const loadWilayahList = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/wilayah`);
+      if (res.ok) {
+        const data = await res.json();
+        const rawList = Array.isArray(data) ? data : data.data || [];
+        setMasterWilayahList(rawList);
+      }
+    } catch (err) {
+      console.error('Failed to load master wilayah API:', err);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    loadWilayahList();
   }, []);
+
+  const dynamicKecamatanList = useMemo(() => {
+    const setKec = new Set<string>();
+    masterWilayahList.forEach((w) => {
+      if (w.kecamatan) setKec.add(w.kecamatan.trim());
+    });
+    if (setKec.size === 0) {
+      ['Lumajang', 'Sukodono', 'Pasrujambe', 'Senduro', 'Gucialit', 'Padang', 'Klakah', 'Ranuyoso', 'Randuagung', 'Jatiroto', 'Rowokangkung', 'Yosowilangun', 'Tekung', 'Kunir', 'Tempeh', 'Pasirian', 'Candipuro', 'Pronojiwo', 'Tempursari', 'Sumbersuko'].forEach((k) => setKec.add(k));
+    }
+    return Array.from(setKec).sort();
+  }, [masterWilayahList]);
+
+  const dynamicKelurahanOptions = useMemo(() => {
+    const matches = masterWilayahList.filter(
+      (w) => w.kecamatan && w.kecamatan.toLowerCase().trim() === formKec.toLowerCase().trim()
+    );
+    if (matches.length > 0) {
+      return matches.map((w) => ({
+        nama: w.kelurahan,
+        kode: w.kode_kel || w.kelurahan.slice(0, 3).toUpperCase(),
+      }));
+    }
+    return [
+      { nama: 'Jogoyudan', kode: 'JGY' },
+      { nama: 'Jogotrunan', kode: 'JGT' },
+      { nama: 'Rogotrunan', kode: 'RGT' },
+      { nama: 'Citrodiwangsan', kode: 'CTR' },
+      { nama: 'Tompokersan', kode: 'TMP' },
+      { nama: 'Kepuharjo', kode: 'KPH' },
+      { nama: 'Ditotrunan', kode: 'DTR' },
+    ];
+  }, [masterWilayahList, formKec]);
+
+  const dynamicAllKelurahanFilterList = useMemo(() => {
+    const setKel = new Set<string>();
+    masterWilayahList.forEach((w) => {
+      if (w.kelurahan) setKel.add(w.kelurahan.trim());
+    });
+    if (setKel.size === 0) {
+      ['Jogoyudan', 'Jogotrunan', 'Rogotrunan', 'Citrodiwangsan', 'Tompokersan', 'Kepuharjo', 'Ditotrunan'].forEach((k) => setKel.add(k));
+    }
+    return Array.from(setKel).sort();
+  }, [masterWilayahList]);
 
   const displayData = livePelanggan;
 
@@ -97,6 +156,7 @@ export default function PelangganPage() {
   }, [filteredData, currentPage]);
 
   const handleOpenModal = (item?: Pelanggan) => {
+    loadWilayahList();
     if (item) {
       setSelectedItem(item);
       setFormNama(item.nama);
@@ -108,13 +168,15 @@ export default function PelangganPage() {
       setFormVa(item.va.toString());
       setFormHp(item.noHp || '');
     } else {
+      const defaultKec = dynamicKecamatanList[0] || 'Lumajang';
       setSelectedItem(null);
       setFormNama('');
       setFormAlamat('');
       setFormRt('01');
       setFormRw('01');
-      setFormKel('Jogoyudan');
-      setFormKec('Lumajang');
+      setFormKec(defaultKec);
+      const firstKel = dynamicKelurahanOptions[0]?.nama || 'Jogoyudan';
+      setFormKel(firstKel);
       setFormVa('900');
       setFormHp('');
     }
@@ -289,16 +351,14 @@ export default function PelangganPage() {
                 setFilterKel(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs bg-[var(--color-ink-50)] text-[var(--color-ink-900)] focus:outline-none"
+              className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs bg-[var(--color-ink-50)] text-[var(--color-ink-900)] focus:outline-none font-semibold"
             >
               <option value="">Semua Kelurahan</option>
-              <option value="Jogoyudan">Jogoyudan</option>
-              <option value="Jogotrunan">Jogotrunan</option>
-              <option value="Rogotrunan">Rogotrunan</option>
-              <option value="Citrodiwangsan">Citrodiwangsan</option>
-              <option value="Tompokersan">Tompokersan</option>
-              <option value="Kepuharjo">Kepuharjo</option>
-              <option value="Ditotrunan">Ditotrunan</option>
+              {dynamicAllKelurahanFilterList.map((kelName) => (
+                <option key={kelName} value={kelName}>
+                  {kelName}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -313,10 +373,14 @@ export default function PelangganPage() {
                 setFilterKec(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs bg-[var(--color-ink-50)] text-[var(--color-ink-900)] focus:outline-none"
+              className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs bg-[var(--color-ink-50)] text-[var(--color-ink-900)] focus:outline-none font-semibold"
             >
               <option value="">Semua Kecamatan</option>
-              <option value="Lumajang">Lumajang</option>
+              {dynamicKecamatanList.map((kecName) => (
+                <option key={kecName} value={kecName}>
+                  {kecName}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -447,15 +511,12 @@ export default function PelangganPage() {
       {showPrintReport && (
         <div className="printable-receipt-area hidden">
           <div className="max-w-4xl mx-auto p-8 bg-white font-sans text-slate-800 space-y-6">
-            {/* Kop Surat DLH */}
-            <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
-              <h2 className="text-xl font-bold uppercase tracking-wider">Pemerintah Kabupaten Lumajang</h2>
-              <h1 className="text-2xl font-black uppercase tracking-wide">Dinas Lingkungan Hidup</h1>
-              <p className="text-xs font-medium text-slate-600">Jl. Trunojoyo No. 12, Lumajang, Jawa Timur | Telp: (0334) 881234</p>
-              <div className="pt-2 border-t border-slate-300">
-                <h3 className="text-sm font-bold uppercase tracking-wide">Laporan Data Wajib Retribusi Sampah</h3>
-                <p className="text-xs text-slate-500">Tanggal Cetak: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-              </div>
+            {/* Kop Surat DLH Pemkab Lumajang */}
+            <KopSurat subTitle="DINAS LINGKUNGAN HIDUP" />
+
+            <div className="text-center pt-2 border-t border-slate-300 pb-2">
+              <h3 className="text-sm font-bold uppercase tracking-wide">LAPORAN DATA WAJIB RETRIBUSI SAMPAH</h3>
+              <p className="text-xs text-slate-500">Tanggal Cetak: {new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
             </div>
 
             {/* Ringkasan Filter */}
@@ -577,30 +638,23 @@ export default function PelangganPage() {
                   <label className="block text-xs font-semibold text-[var(--color-ink-700)] mb-1">Kecamatan</label>
                   <select
                     value={formKec}
-                    onChange={(e) => setFormKec(e.target.value)}
+                    onChange={(e) => {
+                      const newKec = e.target.value;
+                      setFormKec(newKec);
+                      const matchingKel = masterWilayahList.filter(
+                        (w) => w.kecamatan && w.kecamatan.toLowerCase().trim() === newKec.toLowerCase().trim()
+                      );
+                      if (matchingKel.length > 0) {
+                        setFormKel(matchingKel[0].kelurahan);
+                      }
+                    }}
                     className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none font-bold"
                   >
-                    <option value="Lumajang">Lumajang</option>
-                    <option value="Sukodono">Sukodono</option>
-                    <option value="Pasrujambe">Pasrujambe</option>
-                    <option value="Senduro">Senduro</option>
-                    <option value="Gucialit">Gucialit</option>
-                    <option value="Padang">Padang</option>
-                    <option value="Kedungjambe">Kedungjambe</option>
-                    <option value="Klakah">Klakah</option>
-                    <option value="Ranuyoso">Ranuyoso</option>
-                    <option value="Randuagung">Randuagung</option>
-                    <option value="Jatiroto">Jatiroto</option>
-                    <option value="Rowokangkung">Rowokangkung</option>
-                    <option value="Yosowilangun">Yosowilangun</option>
-                    <option value="Tekung">Tekung</option>
-                    <option value="Kunir">Kunir</option>
-                    <option value="Tempeh">Tempeh</option>
-                    <option value="Pasirian">Pasirian</option>
-                    <option value="Candipuro">Candipuro</option>
-                    <option value="Pronojiwo">Pronojiwo</option>
-                    <option value="Tempursari">Tempursari</option>
-                    <option value="Sumbersuko">Sumbersuko</option>
+                    {dynamicKecamatanList.map((kecName) => (
+                      <option key={kecName} value={kecName}>
+                        {kecName}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -609,15 +663,13 @@ export default function PelangganPage() {
                   <select
                     value={formKel}
                     onChange={(e) => setFormKel(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none"
+                    className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none font-bold"
                   >
-                    <option value="Jogoyudan">Jogoyudan (JGY)</option>
-                    <option value="Jogotrunan">Jogotrunan (JGT)</option>
-                    <option value="Rogotrunan">Rogotrunan (RGT)</option>
-                    <option value="Citrodiwangsan">Citrodiwangsan (CTR)</option>
-                    <option value="Tompokersan">Tompokersan (TMP)</option>
-                    <option value="Kepuharjo">Kepuharjo (KPH)</option>
-                    <option value="Ditotrunan">Ditotrunan (DTR)</option>
+                    {dynamicKelurahanOptions.map((item) => (
+                      <option key={item.nama} value={item.nama}>
+                        {item.nama} ({item.kode})
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

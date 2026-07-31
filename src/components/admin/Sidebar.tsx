@@ -158,17 +158,6 @@ export default function Sidebar() {
               )}
 
               <Link
-                href="/dashboard/pengaturan/jadwal"
-                className={`block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                  pathname === '/dashboard/pengaturan/jadwal'
-                    ? 'text-white bg-white/10 font-semibold'
-                    : 'text-[var(--color-sidebar-text)] hover:text-white'
-                }`}
-              >
-                Jadwal Otomatis
-              </Link>
-
-              <Link
                 href="/dashboard/pengaturan/aplikasi"
                 className={`block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
                   pathname === '/dashboard/pengaturan/aplikasi'
@@ -176,18 +165,7 @@ export default function Sidebar() {
                     : 'text-[var(--color-sidebar-text)] hover:text-white'
                 }`}
               >
-                Aplikasi
-              </Link>
-
-              <Link
-                href="/dashboard/pengaturan"
-                className={`block px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                  pathname === '/dashboard/pengaturan'
-                    ? 'text-white bg-white/10 font-semibold'
-                    : 'text-[var(--color-sidebar-text)] hover:text-white'
-                }`}
-              >
-                Panduan Pembayaran
+                Aplikasi & Sistem
               </Link>
             </div>
           )}

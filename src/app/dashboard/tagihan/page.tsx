@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import ReceiptPrint from '@/components/admin/ReceiptPrint';
-import { Search, Printer, DollarSign, CheckCircle2, XCircle, X, Zap, QrCode, CreditCard, User, Calendar, MapPin, Layers, ChevronLeft, ChevronRight } from 'lucide-react';
+import KopSurat from '@/components/admin/KopSurat';
+import { Search, Printer, DollarSign, CheckCircle2, XCircle, X, Zap, QrCode, CreditCard, User, Calendar, MapPin, Layers, ChevronLeft, ChevronRight, Camera, Upload, Image as ImageIcon, RotateCcw, Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { API_BASE_URL } from '@/lib/api';
 import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
@@ -20,6 +21,7 @@ interface InvoiceRow {
   nominal: number;
   status: string;
   penerima: string;
+  buktiUrl?: string;
 }
 
 const getMonthNumber = (bulanStr?: string): number => {
@@ -52,11 +54,20 @@ export default function TagihanAdminPage() {
   // Print States: single receipt vs full report
   const [printReceiptData, setPrintReceiptData] = useState<InvoiceRow | null>(null);
   const [showPrintReport, setShowPrintReport] = useState(false);
+  const [viewProofUrl, setViewProofUrl] = useState<string | null>(null);
 
-  // Pay Modal State
+  // Pay Modal States
   const [payModalData, setPayModalData] = useState<InvoiceRow | null>(null);
+  const [payMethod, setPayMethod] = useState<'tunai' | 'qris'>('tunai');
+  const [buktiImage, setBuktiImage] = useState<string>('');
+  const [officerName, setOfficerName] = useState<string>('Petugas Loket DLH');
   const [isProcessingPay, setIsProcessingPay] = useState(false);
   const [paySuccessMsg, setPaySuccessMsg] = useState('');
+
+  // Camera States
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   // Generate Mass Invoices Modal State
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -174,15 +185,108 @@ export default function TagihanAdminPage() {
             nominal: Number(inv.nominal) || 0,
             status: inv.status === 'lunas' || inv.status === 'Lunas' ? 'Lunas' : 'Belum Lunas',
             penerima: inv.penerima || '-',
+            buktiUrl: inv.bukti_url || '',
           }))
         );
       }
     } catch (err) {
-      console.error('Error reloading invoices:', err);
+      console.error('Failed to load tagihan API:', err);
+    }
+  };
+
+  // Fetch live tagihan data from backend API
+  useEffect(() => {
+    loadInvoices();
+  }, []);
+
+  const startCamera = async () => {
+    try {
+      setIsCameraActive(true);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      });
+      mediaStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error('Camera access error:', err);
+      showToast('Gagal mengakses kamera. Pastikan izin kamera telah diberikan.', 'error');
+      setIsCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    const maxWidth = 1000;
+    const origWidth = videoRef.current.videoWidth || 1280;
+    const origHeight = videoRef.current.videoHeight || 720;
+    const scale = Math.min(1, maxWidth / origWidth);
+    canvas.width = origWidth * scale;
+    canvas.height = origHeight * scale;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      setBuktiImage(dataUrl);
+      stopCamera();
+      showToast('Foto bukti pembayaran berhasil diambil!', 'success');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const maxSizeBytes = 2 * 1024 * 1024; // 2MB Limit
+      if (file.size > maxSizeBytes) {
+        showToast('Ukuran file gambar melebihi batas maksimum 2MB. Silakan pilih foto lain yang lebih kecil.', 'error');
+        e.target.value = '';
+        return;
+      }
+
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const src = event.target?.result as string;
+        img.src = src;
+      };
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxWidth = 1000;
+        const scale = Math.min(1, maxWidth / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.75);
+          setBuktiImage(compressedDataUrl);
+        } else {
+          setBuktiImage(img.src);
+        }
+        showToast('Gambar bukti pembayaran berhasil diunggah dan dioptimalkan!', 'success');
+      };
+      img.onerror = () => {
+        showToast('Gagal memproses file gambar.', 'error');
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handleMarkAsPaid = async (idInvoice: string) => {
+    if (buktiImage && buktiImage.length > 2.8 * 1024 * 1024) {
+      showToast('Ukuran foto bukti pembayaran melebihi batas 2MB. Silakan pilih foto lain yang lebih kecil.', 'error');
+      return;
+    }
     setIsProcessingPay(true);
     setPaySuccessMsg('');
     try {
@@ -190,14 +294,15 @@ export default function TagihanAdminPage() {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const inv = invoices.find((i) => i.idInvoice === idInvoice);
+      const finalPenerima = payMethod === 'tunai'
+        ? `Loket Tunai (${officerName || 'Petugas DLH'})`
+        : `QRIS / Transfer (${officerName || 'Petugas DLH'})`;
 
       const payload = {
-        id_invoice: idInvoice,
-        id_pelanggan: inv?.idPelanggan || '',
-        bulan: inv?.bulan || 'Maret 2026',
-        nominal: inv?.nominal || 0,
-        admin: 'Petugas Loket DLH',
+        idInvoice,
+        status: 'Lunas',
+        admin: finalPenerima,
+        buktiUrl: buktiImage || undefined,
       };
 
       const res = await fetch(`${API_BASE_URL}/pembayaran`, {
@@ -207,15 +312,19 @@ export default function TagihanAdminPage() {
       });
 
       if (res.ok) {
-        setPaySuccessMsg('Pembayaran berhasil dikonfirmasi dan status invoice telah LUNAS!');
+        setPaySuccessMsg(`Pembayaran ${payMethod === 'tunai' ? 'Tunai di Loket' : 'QRIS'} berhasil dikonfirmasi dan status LUNAS!`);
         showToast('Pembayaran berhasil dikonfirmasi!', 'success');
+        stopCamera();
         await loadInvoices();
         setTimeout(() => {
           setPayModalData(null);
           setPaySuccessMsg('');
+          setBuktiImage('');
         }, 1500);
       } else {
-        showToast('Gagal mengonfirmasi pembayaran pada server', 'error');
+        const errData = await res.json().catch(() => null);
+        const errMsg = errData?.message || 'Gagal mengonfirmasi pembayaran pada server';
+        showToast(`Gagal: ${errMsg}`, 'error');
       }
     } catch (err) {
       console.error('Error confirming payment:', err);
@@ -431,26 +540,44 @@ export default function TagihanAdminPage() {
                       <td className="p-4">{item.bulan}</td>
                       <td className="p-4 font-semibold">Rp {item.nominal.toLocaleString('id-ID')}</td>
                       <td className="p-4 text-center">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                            isLunas
-                              ? 'bg-[var(--color-success-bg)] text-[var(--color-success)] border border-[var(--color-success)]/20'
-                              : 'bg-[var(--color-danger-bg)] text-[var(--color-danger)] border border-[var(--color-danger)]/20'
-                          }`}
-                        >
-                          {isLunas ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                          {item.status}
-                        </span>
+                        <div className="flex flex-col items-center justify-center">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                              isLunas
+                                ? 'bg-[var(--color-success-bg)] text-[var(--color-success)] border border-[var(--color-success)]/20'
+                                : 'bg-[var(--color-danger-bg)] text-[var(--color-danger)] border border-[var(--color-danger)]/20'
+                            }`}
+                          >
+                            {isLunas ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                            {item.status}
+                          </span>
+                          {isLunas && item.penerima && item.penerima !== '-' && (
+                            <span className="text-[10px] font-medium text-[var(--color-ink-500)] mt-0.5 flex items-center gap-1">
+                              {item.penerima}
+                              {item.buktiUrl && (
+                                <button
+                                  type="button"
+                                  onClick={() => setViewProofUrl(item.buktiUrl || null)}
+                                  className="text-emerald-600 hover:text-emerald-700 font-bold underline flex items-center gap-0.5 ml-1"
+                                  title="Lihat Bukti Foto Bayar"
+                                >
+                                  <Camera className="w-3 h-3" /> Foto
+                                </button>
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4 text-center">
                         <div className="flex items-center justify-center gap-1.5">
                           {!isLunas && (
                             <button
                               onClick={() => setPayModalData(item)}
-                              className="p-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
-                              title="Proses Bayar / Tampilkan QRIS"
+                              className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs flex items-center gap-1 transition-colors"
+                              title="Proses Bayar Tunai / Dynamic QRIS"
                             >
-                              <DollarSign className="w-4 h-4" />
+                              <DollarSign className="w-3.5 h-3.5" />
+                              <span>Bayar Loket</span>
                             </button>
                           )}
                           {isLunas && (
@@ -500,20 +627,22 @@ export default function TagihanAdminPage() {
         </div>
       </div>
 
-      {/* PROSES BAYAR & QRIS MODAL */}
+      {/* PROSES BAYAR & MODAL LOKET TUNAI / QRIS */}
       {payModalData && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-6 shadow-2xl border border-[var(--color-ink-100)]">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-[var(--color-ink-100)] max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-[var(--color-ink-100)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--color-ink-100)]">
               <div className="flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-[var(--color-brand-mid)]" />
-                <h3 className="text-base font-bold text-[var(--color-ink-900)]">Detail Pembayaran & Kode QRIS</h3>
+                <h3 className="text-base font-bold text-[var(--color-ink-900)]">Loket Pembayaran Retribusi</h3>
               </div>
               <button
                 onClick={() => {
+                  stopCamera();
                   setPayModalData(null);
                   setPaySuccessMsg('');
+                  setBuktiImage('');
                 }}
                 className="p-1 rounded-lg text-[var(--color-ink-500)] hover:bg-[var(--color-ink-100)]"
               >
@@ -521,30 +650,58 @@ export default function TagihanAdminPage() {
               </button>
             </div>
 
-            {/* Customer & Billing Info Card */}
-            <div className="bg-[var(--color-ink-50)] p-4 rounded-2xl border border-[var(--color-ink-100)] space-y-3 text-xs">
-              <div className="flex justify-between items-center pb-2 border-b border-[var(--color-ink-200)]">
+            {/* Payment Method Selector Tabs */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setPayMethod('tunai');
+                  stopCamera();
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  payMethod === 'tunai'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <DollarSign className="w-4 h-4" />
+                Bayar Tunai di Loket
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPayMethod('qris');
+                  stopCamera();
+                }}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+                  payMethod === 'qris'
+                    ? 'bg-[var(--color-brand-mid)] text-white shadow-xs'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <QrCode className="w-4 h-4" />
+                Dynamic QRIS
+              </button>
+            </div>
+
+            {/* Customer & Billing Summary */}
+            <div className="bg-[var(--color-ink-50)] p-4 rounded-2xl border border-[var(--color-ink-100)] space-y-2 text-xs">
+              <div className="flex justify-between items-center pb-1.5 border-b border-[var(--color-ink-200)]">
                 <span className="text-[var(--color-ink-500)] font-semibold flex items-center gap-1.5">
                   <User className="w-3.5 h-3.5 text-[var(--color-brand-mid)]" /> Wajib Retribusi:
                 </span>
                 <span className="font-bold text-[var(--color-ink-900)]">{payModalData.nama}</span>
               </div>
 
-              <div className="flex justify-between items-center pb-2 border-b border-[var(--color-ink-200)]">
+              <div className="flex justify-between items-center pb-1.5 border-b border-[var(--color-ink-200)]">
                 <span className="text-[var(--color-ink-500)] font-semibold flex items-center gap-1.5">
                   <CreditCard className="w-3.5 h-3.5 text-[var(--color-brand-mid)]" /> ID Pelanggan:
                 </span>
                 <span className="font-mono-id font-bold text-[var(--color-brand-deep)]">{payModalData.idPelanggan}</span>
               </div>
 
-              <div className="flex justify-between items-center pb-2 border-b border-[var(--color-ink-200)]">
-                <span className="text-[var(--color-ink-500)] font-semibold flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-[var(--color-brand-mid)]" /> Alamat / Wilayah:
-                </span>
-                <span className="font-medium text-[var(--color-ink-900)]">{payModalData.alamat} (RT {payModalData.rt} / RW {payModalData.rw})</span>
-              </div>
-
-              <div className="flex justify-between items-center pb-2 border-b border-[var(--color-ink-200)]">
+              <div className="flex justify-between items-center pb-1.5 border-b border-[var(--color-ink-200)]">
                 <span className="text-[var(--color-ink-500)] font-semibold flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5 text-[var(--color-brand-mid)]" /> Periode Tagihan:
                 </span>
@@ -552,29 +709,120 @@ export default function TagihanAdminPage() {
               </div>
 
               <div className="flex justify-between items-center pt-1 text-sm">
-                <span className="text-[var(--color-ink-900)] font-bold">Total Tagihan:</span>
+                <span className="text-[var(--color-ink-900)] font-bold">Total Nominal:</span>
                 <span className="text-lg font-extrabold text-[var(--color-brand-deep)]">
                   Rp {payModalData.nominal.toLocaleString('id-ID')}
                 </span>
               </div>
             </div>
 
-            {/* Dynamic QRIS Code Section */}
-            <div className="flex flex-col items-center justify-center p-5 bg-white rounded-2xl border-2 border-dashed border-[var(--color-brand-mid)]/30 space-y-3 text-center">
-              <div className="px-3 py-1 rounded-full bg-[var(--color-brand-wash)] text-[var(--color-brand-deep)] text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1">
-                <QrCode className="w-3.5 h-3.5" /> Dynamic QRIS
+            {/* TUNAI MODE */}
+            {payMethod === 'tunai' && (
+              <div className="space-y-4 pt-1">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-700">
+                    Nama Petugas Loket / Penerima
+                  </label>
+                  <input
+                    type="text"
+                    value={officerName}
+                    onChange={(e) => setOfficerName(e.target.value)}
+                    placeholder="Contoh: Petugas Loket DLH"
+                    className="w-full px-3.5 py-2 rounded-xl border border-gray-300 text-xs font-semibold text-gray-800 bg-gray-50 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                {/* Upload & Camera Section */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-gray-700">
+                    Unggah Bukti Bayar / Tangkap Foto Kamera Loket (Maksimum 2MB)
+                  </label>
+
+                  {/* Buttons for Camera vs File Upload */}
+                  <div className="flex gap-2">
+                    <label className="flex-1 py-2 px-3 rounded-xl border border-gray-300 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 cursor-pointer flex items-center justify-center gap-2 transition-colors">
+                      <Upload className="w-4 h-4 text-emerald-600" />
+                      <span>Upload File Gambar</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                    </label>
+
+                    {!isCameraActive ? (
+                      <button
+                        type="button"
+                        onClick={startCamera}
+                        className="flex-1 py-2 px-3 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Camera className="w-4 h-4 text-indigo-600" />
+                        <span>Buka Kamera Loket</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={stopCamera}
+                        className="px-3 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 text-xs font-semibold hover:bg-red-100"
+                      >
+                        Tutup Kamera
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Live WebCam Stream View */}
+                  {isCameraActive && (
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-500 bg-black space-y-2 p-2">
+                      <video ref={videoRef} autoPlay playsInline className="w-full h-48 object-cover rounded-xl" />
+                      <div className="flex justify-center gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={capturePhoto}
+                          className="py-2 px-4 rounded-xl bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-md hover:bg-emerald-700"
+                        >
+                          <Camera className="w-4 h-4" />
+                          Ambil Foto Bukti (Snapshot)
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Image Preview Thumbnail */}
+                  {buktiImage && (
+                    <div className="relative p-2 border border-emerald-300 bg-emerald-50/50 rounded-2xl flex items-center gap-3">
+                      <img src={buktiImage} alt="Bukti Pembayaran" className="w-16 h-16 object-cover rounded-xl border border-emerald-300" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-emerald-900 truncate">Foto Bukti Terlampir</p>
+                        <p className="text-[10px] text-emerald-700">Tersimpan dalam format digital</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setBuktiImage('')}
+                        className="p-1 rounded-lg text-red-500 hover:bg-red-100"
+                        title="Hapus Bukti"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
+            )}
 
-              <QRCodeSVG
-                value={`00020101021226670016ID.GOV.DLH.LUMAJANG011893600914000000000002155204939953033605405150005802ID5912DLH LUMAJANG6008LUMAJANG61056731162190715${payModalData.idInvoice}6304ABCD`}
-                size={160}
-                level="H"
-              />
+            {/* QRIS MODE */}
+            {payMethod === 'qris' && (
+              <div className="flex flex-col items-center justify-center p-5 bg-white rounded-2xl border-2 border-dashed border-[var(--color-brand-mid)]/30 space-y-3 text-center">
+                <div className="px-3 py-1 rounded-full bg-[var(--color-brand-wash)] text-[var(--color-brand-deep)] text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1">
+                  <QrCode className="w-3.5 h-3.5" /> Dynamic QRIS
+                </div>
 
-              <p className="text-[11px] text-[var(--color-ink-500)] leading-tight max-w-xs">
-                Scan QRIS di atas menggunakan <span className="font-bold text-[var(--color-ink-900)]">Bank Jatim M-Banking, GoPay, OVO, ShopeePay, Dana, atau BCA</span>.
-              </p>
-            </div>
+                <QRCodeSVG
+                  value={`00020101021226670016ID.GOV.DLH.LUMAJANG011893600914000000000002155204939953033605405150005802ID5912DLH LUMAJANG6008LUMAJANG61056731162190715${payModalData.idInvoice}6304ABCD`}
+                  size={160}
+                  level="H"
+                />
+
+                <p className="text-[11px] text-[var(--color-ink-500)] leading-tight max-w-xs">
+                  Scan QRIS di atas menggunakan <span className="font-bold text-[var(--color-ink-900)]">Bank Jatim M-Banking, GoPay, OVO, ShopeePay, Dana, atau BCA</span>.
+                </p>
+              </div>
+            )}
 
             {paySuccessMsg && (
               <div className="flex items-center gap-2 text-xs font-medium text-[var(--color-success)] bg-[var(--color-success-bg)] p-3.5 rounded-xl border border-[var(--color-success)]/20 animate-fadeIn">
@@ -586,23 +834,32 @@ export default function TagihanAdminPage() {
             {/* Action Buttons */}
             <div className="flex gap-3 pt-2">
               <button
-                onClick={() => setPayModalData(null)}
+                type="button"
+                onClick={() => {
+                  stopCamera();
+                  setPayModalData(null);
+                  setPaySuccessMsg('');
+                  setBuktiImage('');
+                }}
                 className="flex-1 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs font-semibold text-[var(--color-ink-700)] hover:bg-[var(--color-ink-50)]"
               >
-                Tutup
+                Batal
               </button>
               {payModalData.status !== 'Lunas' && (
                 <button
+                  type="button"
                   onClick={() => handleMarkAsPaid(payModalData.idInvoice)}
                   disabled={isProcessingPay}
-                  className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5"
+                  className={`flex-1 py-2.5 rounded-xl text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-colors ${
+                    payMethod === 'tunai' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-[var(--color-brand-mid)] hover:bg-[var(--color-brand-deep)]'
+                  }`}
                 >
                   {isProcessingPay ? (
                     <span className="animate-pulse">Memproses...</span>
                   ) : (
                     <>
                       <CheckCircle2 className="w-4 h-4" />
-                      Bayar Tunai di Loket
+                      {payMethod === 'tunai' ? 'Konfirmasi Bayar Tunai' : 'Tandai Lunas via QRIS'}
                     </>
                   )}
                 </button>
@@ -642,8 +899,11 @@ export default function TagihanAdminPage() {
                   onChange={(e) => setGenTahun(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none font-bold"
                 >
-                  <option value={new Date().getFullYear().toString()}>{new Date().getFullYear()}</option>
-                  <option value={(new Date().getFullYear() + 1).toString()}>{new Date().getFullYear() + 1}</option>
+                  <option value="2024">2024</option>
+                  <option value="2025">2025</option>
+                  <option value="2026">2026</option>
+                  <option value="2027">2027</option>
+                  <option value="2028">2028</option>
                 </select>
               </div>
 
@@ -656,25 +916,11 @@ export default function TagihanAdminPage() {
                   onChange={(e) => setGenBulan(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none font-bold"
                 >
-                  {(() => {
-                    const months = [
-                      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-                      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-                    ];
-                    const now = new Date();
-                    const curYear = now.getFullYear();
-                    const curMonth = now.getMonth(); // 0-11
-                    const selYear = parseInt(genTahun, 10);
-
-                    return months.map((m, idx) => {
-                      const isPast = selYear < curYear || (selYear === curYear && idx < curMonth);
-                      return (
-                        <option key={m} value={m} disabled={isPast}>
-                          {m} {genTahun} {isPast ? '(Masa Lalu - Terkunci)' : ''}
-                        </option>
-                      );
-                    });
-                  })()}
+                  {['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'].map((m) => (
+                    <option key={m} value={m}>
+                      {m} {genTahun}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -716,6 +962,29 @@ export default function TagihanAdminPage() {
         </div>
       )}
 
+      {/* Proof Image Preview Modal */}
+      {viewProofUrl && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-4 max-w-lg w-full space-y-3">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+              <h3 className="text-xs font-bold text-gray-900 flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4 text-emerald-600" />
+                Bukti Foto Pembayaran
+              </h3>
+              <button onClick={() => setViewProofUrl(null)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex justify-center p-2 bg-slate-900 rounded-2xl">
+              <img src={viewProofUrl} alt="Bukti Bayar" className="max-h-[60vh] object-contain rounded-xl" />
+            </div>
+            <button onClick={() => setViewProofUrl(null)} className="w-full py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold hover:bg-gray-200">
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* PRINTABLE SINGLE RECEIPT TEMPLATE */}
       {printReceiptData && (
         <div className="printable-receipt-area hidden">
@@ -736,23 +1005,20 @@ export default function TagihanAdminPage() {
       {showPrintReport && (
         <div className="printable-receipt-area hidden">
           <div className="max-w-4xl mx-auto p-8 bg-white font-sans text-slate-800 space-y-6">
-            {/* Kop Surat DLH */}
-            <div className="text-center border-b-2 border-slate-900 pb-4 space-y-1">
-              <h2 className="text-xl font-bold uppercase tracking-wider">Pemerintah Kabupaten Lumajang</h2>
-              <h1 className="text-2xl font-black uppercase tracking-wide">Dinas Lingkungan Hidup</h1>
-              <p className="text-xs font-medium text-slate-600">Jl. Trunojoyo No. 12, Lumajang, Jawa Timur | Telp: (0334) 881234</p>
-              <div className="pt-2 border-t border-slate-300">
-                <h3 className="text-sm font-bold uppercase tracking-wide">
-                  {filterBatch === 'batch1'
-                    ? 'LAPORAN REKAPITULASI SEMESTER I (BATCH 1: BULAN 1 - 6)'
-                    : filterBatch === 'batch2'
-                    ? 'LAPORAN REKAPITULASI SEMESTER II (BATCH 2: BULAN 7 - 12)'
-                    : 'LAPORAN REKAPITULASI TAGIHAN RETRIBUSI SAMPAH (12 BULAN)'}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Tahun {filterTahun || '2026'} | Filter Status: {filterStatus || 'Semua Status'}
-                </p>
-              </div>
+            {/* Kop Surat Pemkab Lumajang */}
+            <KopSurat subTitle="DINAS LINGKUNGAN HIDUP" />
+
+            <div className="text-center pt-2 border-t border-slate-300 pb-2">
+              <h3 className="text-sm font-bold uppercase tracking-wide">
+                {filterBatch === 'batch1'
+                  ? 'LAPORAN REKAPITULASI SEMESTER I (BATCH 1: BULAN 1 - 6)'
+                  : filterBatch === 'batch2'
+                  ? 'LAPORAN REKAPITULASI SEMESTER II (BATCH 2: BULAN 7 - 12)'
+                  : 'LAPORAN REKAPITULASI TAGIHAN RETRIBUSI SAMPAH (12 BULAN)'}
+              </h3>
+              <p className="text-xs text-slate-500">
+                Tahun {filterTahun || '2026'} | Filter Status: {filterStatus || 'Semua Status'}
+              </p>
             </div>
 
             {/* Ringkasan Realisasi Pendapatan */}

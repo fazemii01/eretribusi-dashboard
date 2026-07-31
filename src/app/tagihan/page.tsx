@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Navbar from '@/components/public/Navbar';
 import Footer from '@/components/public/Footer';
 import QrisModal from '@/components/public/QrisModal';
+import KopSurat from '@/components/admin/KopSurat';
 import { Search, QrCode, Printer, Filter, PhoneCall, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { API_BASE_URL } from '@/lib/api';
@@ -285,10 +286,9 @@ export default function TagihanPage() {
       {showPrintStatement && pelanggan && (
         <div className="printable-receipt-area hidden">
           <div className="max-w-xl mx-auto p-8 border-2 border-slate-800 bg-white font-sans text-slate-800 space-y-6">
-            <div className="text-center border-b-2 border-slate-800 pb-4 space-y-1">
-              <h2 className="text-xl font-extrabold uppercase tracking-wide">Dinas Lingkungan Hidup</h2>
-              <p className="text-sm font-semibold uppercase">Kabupaten Lumajang</p>
-              <p className="text-xs text-slate-500">Rincian Lembar Tagihan Retribusi Sampah</p>
+            <KopSurat subTitle="SEKRETARIAT DAERAH" />
+            <div className="text-center pt-2 pb-1 border-b border-slate-300">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-800">Rincian Lembar Tagihan Retribusi Sampah</p>
             </div>
 
             <div className="space-y-2 text-xs">
