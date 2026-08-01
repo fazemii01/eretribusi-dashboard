@@ -28,6 +28,24 @@ interface PelangganInfo {
   va: number;
 }
 
+function getMonthNumber(bulanStr: string): number {
+  if (!bulanStr) return 0;
+  const b = bulanStr.toLowerCase();
+  if (b.includes('jan')) return 1;
+  if (b.includes('feb')) return 2;
+  if (b.includes('mar')) return 3;
+  if (b.includes('apr')) return 4;
+  if (b.includes('mei')) return 5;
+  if (b.includes('jun')) return 6;
+  if (b.includes('jul')) return 7;
+  if (b.includes('agu') || b.includes('ags')) return 8;
+  if (b.includes('sep')) return 9;
+  if (b.includes('okt')) return 10;
+  if (b.includes('nov')) return 11;
+  if (b.includes('des')) return 12;
+  return 0;
+}
+
 export default function TagihanPage() {
   const [inputId, setInputId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -84,10 +102,31 @@ export default function TagihanPage() {
     }, 200);
   };
 
-  const yearsAvailable = ['2026', '2025'];
-  const filteredTagihan = tagihan.filter((item) =>
-    filterTahun ? item.bulan.includes(filterTahun) : true,
-  );
+  const yearsAvailable = (() => {
+    const set = new Set<string>();
+    const currentYr = new Date().getFullYear();
+    for (let i = currentYr - 2; i <= currentYr + 5; i++) {
+      set.add(i.toString());
+    }
+    tagihan.forEach((item) => {
+      const parts = item.bulan ? item.bulan.trim().split(' ') : [];
+      if (parts.length > 1 && /^\d{4}$/.test(parts[parts.length - 1])) {
+        set.add(parts[parts.length - 1]);
+      }
+    });
+    return Array.from(set).sort().reverse();
+  })();
+
+  const filteredTagihan = tagihan
+    .filter((item) => (filterTahun ? item.bulan.includes(filterTahun) : true))
+    .sort((a, b) => {
+      const yearA = parseInt(a.bulan ? a.bulan.trim().split(' ').pop() || '0' : '0', 10);
+      const yearB = parseInt(b.bulan ? b.bulan.trim().split(' ').pop() || '0' : '0', 10);
+      if (yearA !== yearB) {
+        return yearA - yearB;
+      }
+      return getMonthNumber(a.bulan) - getMonthNumber(b.bulan);
+    });
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-ink-50)]">

@@ -19,9 +19,27 @@ interface ReceiptRow {
   kanal: string;
 }
 
+function getMonthNumber(bulanStr: string): number {
+  if (!bulanStr) return 0;
+  const b = bulanStr.toLowerCase();
+  if (b.includes('jan')) return 1;
+  if (b.includes('feb')) return 2;
+  if (b.includes('mar')) return 3;
+  if (b.includes('apr')) return 4;
+  if (b.includes('mei')) return 5;
+  if (b.includes('jun')) return 6;
+  if (b.includes('jul')) return 7;
+  if (b.includes('agu') || b.includes('ags')) return 8;
+  if (b.includes('sep')) return 9;
+  if (b.includes('okt')) return 10;
+  if (b.includes('nov')) return 11;
+  if (b.includes('des')) return 12;
+  return 0;
+}
+
 export default function InvoiceReceiptPage() {
   const [search, setSearch] = useState('');
-  const [filterTahun, setFilterTahun] = useState('2026');
+  const [filterTahun, setFilterTahun] = useState('');
   const [filterBulan, setFilterBulan] = useState('');
   const [printReceiptData, setPrintReceiptData] = useState<ReceiptRow | null>(null);
 
@@ -57,6 +75,18 @@ export default function InvoiceReceiptPage() {
     loadReceipts();
   }, []);
 
+  const availableYears = (() => {
+    const set = new Set<string>();
+    const currentYr = new Date().getFullYear();
+    for (let i = currentYr - 2; i <= currentYr + 5; i++) {
+      set.add(i.toString());
+    }
+    receipts.forEach((r) => {
+      if (r.tahun && /^\d{4}$/.test(r.tahun)) set.add(r.tahun);
+    });
+    return Array.from(set).sort().reverse();
+  })();
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -75,6 +105,13 @@ export default function InvoiceReceiptPage() {
     const matchTahun = filterTahun === '' || (item.tahun || '') === filterTahun;
     const matchBulan = filterBulan === '' || (item.bulan || '').toLowerCase().includes(filterBulan.toLowerCase());
     return matchSearch && matchTahun && matchBulan;
+  }).sort((a, b) => {
+    const yearA = parseInt(a.tahun || '0', 10);
+    const yearB = parseInt(b.tahun || '0', 10);
+    if (yearA !== yearB) {
+      return yearA - yearB;
+    }
+    return getMonthNumber(a.bulan) - getMonthNumber(b.bulan);
   });
 
   const totalPages = Math.max(1, Math.ceil(filteredReceipts.length / itemsPerPage));
@@ -163,8 +200,11 @@ export default function InvoiceReceiptPage() {
               className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs bg-[var(--color-ink-50)] text-[var(--color-ink-900)] focus:outline-none"
             >
               <option value="">Semua Tahun</option>
-              <option value="2026">2026</option>
-              <option value="2025">2025</option>
+              {availableYears.map((yr) => (
+                <option key={yr} value={yr}>
+                  {yr}
+                </option>
+              ))}
             </select>
           </div>
 

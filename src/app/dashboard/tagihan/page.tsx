@@ -27,18 +27,18 @@ interface InvoiceRow {
 const getMonthNumber = (bulanStr?: string): number => {
   if (!bulanStr) return 1;
   const b = bulanStr.toLowerCase();
-  if (b.includes('januari')) return 1;
-  if (b.includes('februari')) return 2;
-  if (b.includes('maret')) return 3;
-  if (b.includes('april')) return 4;
+  if (b.includes('jan')) return 1;
+  if (b.includes('feb')) return 2;
+  if (b.includes('mar')) return 3;
+  if (b.includes('apr')) return 4;
   if (b.includes('mei')) return 5;
-  if (b.includes('juni')) return 6;
-  if (b.includes('juli')) return 7;
-  if (b.includes('agustus')) return 8;
-  if (b.includes('september')) return 9;
-  if (b.includes('oktober')) return 10;
-  if (b.includes('november')) return 11;
-  if (b.includes('desember')) return 12;
+  if (b.includes('jun')) return 6;
+  if (b.includes('jul')) return 7;
+  if (b.includes('agu') || b.includes('ags')) return 8;
+  if (b.includes('sep')) return 9;
+  if (b.includes('okt')) return 10;
+  if (b.includes('nov')) return 11;
+  if (b.includes('des')) return 12;
   return 1;
 };
 
@@ -71,12 +71,24 @@ export default function TagihanAdminPage() {
 
   // Generate Mass Invoices Modal State
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [genTahun, setGenTahun] = useState('2026');
+  const [genTahun, setGenTahun] = useState(new Date().getFullYear().toString());
   const [genBulan, setGenBulan] = useState('Juli');
   const [genSuccessMsg, setGenSuccessMsg] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+
+  const availableYears = useMemo(() => {
+    const set = new Set<string>();
+    const currentYr = new Date().getFullYear();
+    for (let i = currentYr - 2; i <= currentYr + 5; i++) {
+      set.add(i.toString());
+    }
+    invoices.forEach((inv) => {
+      if (inv.tahun && /^\d{4}$/.test(inv.tahun)) set.add(inv.tahun);
+    });
+    return Array.from(set).sort().reverse();
+  }, [invoices]);
 
   // Fetch live tagihan data from backend API
   useEffect(() => {
@@ -94,7 +106,7 @@ export default function TagihanAdminPage() {
               alamat: inv.pelanggan?.alamat || inv.alamat || '-',
               rt: inv.pelanggan?.rt || '01',
               rw: inv.pelanggan?.rw || '01',
-              tahun: inv.bulan ? inv.bulan.split(' ').pop() || '2026' : '2026',
+              tahun: inv.bulan ? inv.bulan.split(' ').pop() || new Date().getFullYear().toString() : new Date().getFullYear().toString(),
               bulan: inv.bulan || 'Maret 2026',
               nominal: Number(inv.nominal) || 0,
               status: inv.status === 'lunas' || inv.status === 'Lunas' ? 'Lunas' : 'Belum Lunas',
@@ -134,7 +146,14 @@ export default function TagihanAdminPage() {
 
         return matchSearch && matchTahun && matchBulan && matchStatus && matchBatch;
       })
-      .sort((a, b) => getMonthNumber(a.bulan) - getMonthNumber(b.bulan));
+      .sort((a, b) => {
+        const yearA = parseInt(a.tahun || '0', 10);
+        const yearB = parseInt(b.tahun || '0', 10);
+        if (yearA !== yearB) {
+          return yearA - yearB;
+        }
+        return getMonthNumber(a.bulan) - getMonthNumber(b.bulan);
+      });
   }, [invoices, search, filterTahun, filterBulan, filterBatch, filterStatus]);
 
   const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / itemsPerPage));
@@ -350,8 +369,9 @@ export default function TagihanAdminPage() {
 
       if (res.ok) {
         const result = await res.json();
-        setGenSuccessMsg(result.message || `Berhasil menerbitkan tagihan retribusi untuk periode ${genBulan}!`);
-        showToast(result.message || `Berhasil menerbitkan tagihan retribusi ${genBulan}!`, 'success');
+        const msg = result.message || result.pesan || `Berhasil menerbitkan tagihan retribusi untuk periode ${genBulan}!`;
+        setGenSuccessMsg(msg);
+        showToast(msg, 'success');
         await loadInvoices();
       } else {
         showToast('Gagal menerbitkan tagihan massal', 'error');
@@ -434,8 +454,11 @@ export default function TagihanAdminPage() {
               className="w-full px-3 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs bg-[var(--color-ink-50)] text-[var(--color-ink-900)] focus:outline-none"
             >
               <option value="">Semua Tahun</option>
-              <option value="2026">2026</option>
-              <option value="2025">2025</option>
+              {availableYears.map((yr) => (
+                <option key={yr} value={yr}>
+                  {yr}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -899,11 +922,11 @@ export default function TagihanAdminPage() {
                   onChange={(e) => setGenTahun(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-[var(--color-ink-300)] text-xs text-[var(--color-ink-900)] bg-[var(--color-ink-50)] focus:outline-none font-bold"
                 >
-                  <option value="2024">2024</option>
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
-                  <option value="2028">2028</option>
+                  {availableYears.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
                 </select>
               </div>
 
