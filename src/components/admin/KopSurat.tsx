@@ -6,16 +6,18 @@ interface KopSuratProps {
   alamatLine2?: string;
   telepon?: string;
   faksimile?: string;
+  website?: string;
   email?: string;
 }
 
 export default function KopSurat({
   subTitle = 'DINAS LINGKUNGAN HIDUP',
-  alamatLine1 = 'Jl. Alun-Alun Utara No. 7, Kel. Rogotrunan, Kec. Lumajang',
-  alamatLine2 = 'Kabupaten Lumajang, Provinsi Jawa Timur 67316',
-  telepon = '(0334) 881146',
-  faksimile = '(0334) 881887',
-  email = 'dlh@lumajangkab.go.id',
+  alamatLine1 = 'Jl. Langsep No. 15, Kel. Kepuharjo, Kec. Lumajang',
+  alamatLine2 = '',
+  telepon = '(0334) 888358',
+  faksimile = '(0334) 888358',
+  website = 'dlh.lumajangkab.go.id',
+  email = 'lingkungan@lumajangkab.go.id',
 }: KopSuratProps) {
   return (
     <div className="w-full text-slate-900 font-sans mb-3">
@@ -43,11 +45,16 @@ export default function KopSurat({
           <p className="text-[11px] text-slate-600 leading-tight">
             {alamatLine1}
           </p>
-          <p className="text-[11px] text-slate-600 leading-tight">
-            {alamatLine2}
-          </p>
+          {alamatLine2 && (
+            <p className="text-[11px] text-slate-600 leading-tight">
+              {alamatLine2}
+            </p>
+          )}
           <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
-            Telp: {telepon} | Fax: {faksimile} | E-mail: {email}
+            Telp {telepon} - Fax {faksimile}
+          </p>
+          <p className="text-[10px] text-slate-500 leading-tight">
+            website : {website} - email : {email}
           </p>
         </div>
       </div>
@@ -57,4 +64,5 @@ export default function KopSurat({
     </div>
   );
 }
+
 

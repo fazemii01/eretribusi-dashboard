@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, QrCode, ShieldCheck, CheckCircle2, Printer, Loader2 } from 'lucide-react';
+import { X, QrCode, ShieldCheck, CheckCircle2, Printer, Loader2, Sparkles } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { convertStaticToDynamicQris, DEFAULT_SHOPEEPAY_STATIC_QRIS } from '@/lib/qris';
 
 interface QrisModalProps {
   invoiceId: string;
@@ -13,6 +14,11 @@ interface QrisModalProps {
 export default function QrisModal({ invoiceId, nominal, qrisPayload, onClose, onPaymentSuccess }: QrisModalProps) {
   const [isPaid, setIsPaid] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [qrisProvider, setQrisProvider] = useState<'aspi' | 'shopeepay_test'>('aspi');
+  const [customShopeePayQris, setCustomShopeePayQris] = useState<string>(DEFAULT_SHOPEEPAY_STATIC_QRIS);
+
+  const shopeePayDynamicPayload = convertStaticToDynamicQris(customShopeePayQris, nominal);
+  const activePayload = qrisProvider === 'shopeepay_test' ? shopeePayDynamicPayload : (qrisPayload || invoiceId);
 
   // Poll server every 3 seconds to auto-detect callback from Bank Jatim
   useEffect(() => {
@@ -22,8 +28,6 @@ export default function QrisModal({ invoiceId, nominal, qrisPayload, onClose, on
       try {
         setIsChecking(true);
         // Simulasikan polling status tagihan ke backend API
-        // Dalam mode live, fetch GET /api/payment/snap/status?invoiceId=...
-        // Jika status DB sudah 'Lunas' (dari callback bank), ubah isPaid = true
       } catch (err) {
         // Silent error on polling
       } finally {
@@ -62,9 +66,51 @@ export default function QrisModal({ invoiceId, nominal, qrisPayload, onClose, on
               <p className="text-xs text-[var(--color-ink-500)] font-mono font-medium mt-0.5">Invoice: {invoiceId}</p>
             </div>
 
+            {/* Provider Switcher Tabs */}
+            <div className="grid grid-cols-2 gap-1 p-1 bg-gray-100 rounded-xl text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={() => setQrisProvider('aspi')}
+                className={`py-1.5 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                  qrisProvider === 'aspi' ? 'bg-white text-gray-900 shadow-xs' : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                QRIS Bank Jatim
+              </button>
+              <button
+                type="button"
+                onClick={() => setQrisProvider('shopeepay_test')}
+                className={`py-1.5 px-2 rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                  qrisProvider === 'shopeepay_test' ? 'bg-orange-500 text-white shadow-xs' : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                ShopeePay (Test)
+              </button>
+            </div>
+
+            {/* Custom Static QRIS Input for ShopeePay Test */}
+            {qrisProvider === 'shopeepay_test' && (
+              <div className="bg-orange-50 p-2.5 rounded-xl border border-orange-200 text-left space-y-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-orange-900">
+                  Payload QRIS Statis ShopeePay
+                </label>
+                <input
+                  type="text"
+                  value={customShopeePayQris}
+                  onChange={(e) => setCustomShopeePayQris(e.target.value)}
+                  placeholder="Tempel string 000201... ShopeePay Minta Uang di sini"
+                  className="w-full text-[10px] font-mono p-1.5 bg-white border border-orange-300 rounded-lg text-gray-800 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
+                <p className="text-[9px] text-orange-700">
+                  Go-QRIS otomatis menginjeksi nominal Rp {nominal.toLocaleString('id-ID')} & menghitung ulang checksum CRC16.
+                </p>
+              </div>
+            )}
+
             {/* QR Code Container */}
             <div className="bg-[var(--color-ink-50)] p-5 rounded-2xl border border-[var(--color-ink-100)] flex flex-col items-center justify-center space-y-3 shadow-inner">
-              <QRCodeSVG value={qrisPayload || invoiceId} size={180} level="M" />
+              <QRCodeSVG value={activePayload} size={180} level="M" />
               <div className="text-center">
                 <span className="text-[11px] text-[var(--color-ink-500)] uppercase tracking-wider block">Total Tagihan</span>
                 <span className="text-xl font-extrabold text-[var(--color-brand-deep)]">
@@ -75,7 +121,11 @@ export default function QrisModal({ invoiceId, nominal, qrisPayload, onClose, on
 
             <div className="flex items-center justify-center gap-2 text-xs text-[var(--color-success)] bg-[var(--color-success-bg)] p-2.5 rounded-xl border border-[var(--color-success)]/20">
               <ShieldCheck className="w-4 h-4 shrink-0" />
-              <span>Scan via Bank Jatim, GoPay, OVO, Dana, ShopeePay</span>
+              <span>
+                {qrisProvider === 'shopeepay_test'
+                  ? 'Modul Go-QRIS Test Mode (ShopeePay Minta Uang)'
+                  : 'Scan via Bank Jatim, GoPay, OVO, Dana, ShopeePay'}
+              </span>
             </div>
 
             {/* Live Waiting Callback Indicator */}

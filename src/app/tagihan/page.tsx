@@ -325,7 +325,7 @@ export default function TagihanPage() {
       {showPrintStatement && pelanggan && (
         <div className="printable-receipt-area hidden">
           <div className="max-w-xl mx-auto p-8 border-2 border-slate-800 bg-white font-sans text-slate-800 space-y-6">
-            <KopSurat subTitle="SEKRETARIAT DAERAH" />
+            <KopSurat subTitle="DINAS LINGKUNGAN HIDUP" />
             <div className="text-center pt-2 pb-1 border-b border-slate-300">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-800">Rincian Lembar Tagihan Retribusi Sampah</p>
             </div>
