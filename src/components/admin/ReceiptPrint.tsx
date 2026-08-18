@@ -2,6 +2,7 @@
 
 import KopSurat from './KopSurat';
 import { QRCodeSVG } from 'qrcode.react';
+import { APP_DOMAIN } from '@/lib/api';
 
 interface ReceiptPrintProps {
   invoiceId: string;
@@ -24,7 +25,8 @@ export default function ReceiptPrint({
   nominal,
   admin,
 }: ReceiptPrintProps) {
-  const publicUrl = `https://erestribusi.lumajangkab.go.id/tagihan?id=${idPelanggan}&invoice=${invoiceId}`;
+  const publicUrl = `${APP_DOMAIN.replace(/\/$/, '')}/tagihan?id=${encodeURIComponent(idPelanggan)}&invoice=${encodeURIComponent(invoiceId)}`;
+
 
   return (
     <div className="receipt-card-container bg-white p-6 max-w-xl mx-auto text-slate-900 font-sans space-y-4 border border-slate-300 rounded-2xl shadow-xs">

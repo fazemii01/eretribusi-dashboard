@@ -5,7 +5,7 @@ import ReceiptPrint from '@/components/admin/ReceiptPrint';
 import KopSurat from '@/components/admin/KopSurat';
 import { Search, Printer, DollarSign, CheckCircle2, XCircle, X, Zap, QrCode, CreditCard, User, Calendar, MapPin, Layers, ChevronLeft, ChevronRight, Camera, Upload, Image as ImageIcon, RotateCcw, Check, Sparkles } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
 import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
 import { useToastConfirm } from '@/hooks/useToastConfirm';
 import { convertStaticToDynamicQris, DEFAULT_SHOPEEPAY_STATIC_QRIS } from '@/lib/qris';
@@ -24,6 +24,7 @@ interface InvoiceRow {
   penerima: string;
   buktiUrl?: string;
 }
+
 
 const getMonthNumber = (bulanStr?: string): number => {
   if (!bulanStr) return 1;
@@ -92,39 +93,9 @@ export default function TagihanAdminPage() {
     return Array.from(set).sort().reverse();
   }, [invoices]);
 
-  // Fetch live tagihan data from backend API
-  useEffect(() => {
-    async function loadInvoices() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/tagihan`);
-        if (res.ok) {
-          const data = await res.json();
-          const rawList = Array.isArray(data) ? data : data.data || [];
-          setInvoices(
-            rawList.map((inv: any) => ({
-              idInvoice: inv.id_invoice || `INV-${inv.id}`,
-              idPelanggan: inv.id_pelanggan || '-',
-              nama: inv.pelanggan?.nama || inv.nama || inv.id_pelanggan || '-',
-              alamat: inv.pelanggan?.alamat || inv.alamat || '-',
-              rt: inv.pelanggan?.rt || '01',
-              rw: inv.pelanggan?.rw || '01',
-              tahun: inv.bulan ? inv.bulan.split(' ').pop() || new Date().getFullYear().toString() : new Date().getFullYear().toString(),
-              bulan: inv.bulan || 'Maret 2026',
-              nominal: Number(inv.nominal) || 0,
-              status: inv.status === 'lunas' || inv.status === 'Lunas' ? 'Lunas' : 'Belum Lunas',
-              penerima: inv.penerima || '-',
-            }))
-          );
-        }
-      } catch (err) {
-        console.error('Failed to load tagihan API:', err);
-      }
-    }
-    loadInvoices();
-  }, []);
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+
 
   const filteredInvoices = useMemo(() => {
     if (!Array.isArray(invoices)) return [];
@@ -189,7 +160,10 @@ export default function TagihanAdminPage() {
 
   const loadInvoices = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/tagihan`);
+      const res = await fetch(`${API_BASE_URL}/tagihan`, {
+        headers: getAuthHeaders(),
+      });
+
       if (res.ok) {
         const data = await res.json();
         const rawList = Array.isArray(data) ? data : data.data || [];

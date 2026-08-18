@@ -5,7 +5,8 @@ import StatCard from '@/components/admin/StatCard';
 import { DollarSign, TrendingDown, Users, Star, Calendar } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
+
 
 interface ChartItem {
   bulan: string;
@@ -47,7 +48,10 @@ export default function DashboardStatistik() {
     async function fetchStats() {
       setLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/tagihan/stats?tahun=${selectedYear}`);
+        const res = await fetch(`${API_BASE_URL}/tagihan/stats?tahun=${selectedYear}`, {
+          headers: getAuthHeaders(),
+        });
+
         if (res.ok) {
           const data = await res.json();
           if (data) {

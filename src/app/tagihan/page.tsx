@@ -7,7 +7,8 @@ import QrisModal from '@/components/public/QrisModal';
 import KopSurat from '@/components/admin/KopSurat';
 import { Search, QrCode, Printer, Filter, PhoneCall, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, APP_DOMAIN } from '@/lib/api';
+
 
 interface InvoiceItem {
   invoice: string;
@@ -369,8 +370,9 @@ export default function TagihanPage() {
             </table>
 
             <div className="pt-4 flex flex-col items-center justify-center space-y-2 text-center border-t border-slate-300">
-              <QRCodeSVG value={`https://erestribusi.lumajangkab.go.id/tagihan?id=${pelanggan.id_pelanggan}`} size={100} level="M" />
+              <QRCodeSVG value={`${APP_DOMAIN.replace(/\/$/, '')}/tagihan?id=${encodeURIComponent(pelanggan.id_pelanggan)}`} size={100} level="M" />
               <p className="text-[10px] text-slate-500 max-w-xs">
+
                 Scan QR untuk cek status tagihan online resmi Dinas Lingkungan Hidup Kabupaten Lumajang.
               </p>
             </div>

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import ReceiptPrint from '@/components/admin/ReceiptPrint';
 import { Search, Printer, Download, FileCheck, CheckCircle2, Calendar, User, CreditCard, ChevronLeft, ChevronRight } from 'lucide-react';
-import { API_BASE_URL } from '@/lib/api';
+import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
+
 
 interface ReceiptRow {
   idKuitansi: string;
@@ -48,7 +49,10 @@ export default function InvoiceReceiptPage() {
   useEffect(() => {
     async function loadReceipts() {
       try {
-        const res = await fetch(`${API_BASE_URL}/pembayaran`);
+        const res = await fetch(`${API_BASE_URL}/pembayaran`, {
+          headers: getAuthHeaders(),
+        });
+
         if (res.ok) {
           const data = await res.json();
           const rawList = Array.isArray(data) ? data : data.data || [];
