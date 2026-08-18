@@ -86,7 +86,12 @@ function TagihanContent() {
     setTagihan([]);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/tagihan/public?id=${encodeURIComponent(cleanQuery)}`);
+      // Build query: pass both id and invoice so backend can resolve either
+      let url = `${API_BASE_URL}/tagihan/public?id=${encodeURIComponent(cleanQuery)}`;
+      if (targetInvoice) {
+        url += `&invoice=${encodeURIComponent(targetInvoice)}`;
+      }
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         if (data.pelanggan) {
@@ -101,6 +106,7 @@ function TagihanContent() {
             va: data.pelanggan.va,
           });
           setTagihan(data.tagihan || []);
+          // Priority: targetInvoice from URL > matched_invoice from API
           if (targetInvoice) {
             setActiveInvoiceId(targetInvoice);
           } else if (data.matched_invoice) {
@@ -135,11 +141,14 @@ function TagihanContent() {
       setActiveInvoiceId(invoice);
     }
 
+    // Use invoice as the search key if no id, or id as primary key
     const targetQuery = id || invoice;
     if (targetQuery) {
       setInputId(targetQuery);
-      handleCekTagihan(targetQuery, invoice);
+      // Pass invoice so the API can resolve by invoice number when id lookup fails
+      handleCekTagihan(targetQuery, invoice || undefined);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryId, queryInvoice]);
 
 
