@@ -1,14 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/public/Navbar';
 import Footer from '@/components/public/Footer';
 import QrisModal from '@/components/public/QrisModal';
 import KopSurat from '@/components/admin/KopSurat';
-import { Search, QrCode, Printer, Filter, PhoneCall, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import {
+  Search,
+  QrCode,
+  Printer,
+  Filter,
+  PhoneCall,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  ShieldCheck,
+  FileText,
+  Sparkles,
+} from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { API_BASE_URL, APP_DOMAIN } from '@/lib/api';
-
 
 interface InvoiceItem {
   invoice: string;
@@ -47,8 +59,13 @@ function getMonthNumber(bulanStr: string): number {
   return 0;
 }
 
-export default function TagihanPage() {
+function TagihanContent() {
+  const searchParams = useSearchParams();
+  const queryId = searchParams.get('id') || '';
+  const queryInvoice = searchParams.get('invoice') || '';
+
   const [inputId, setInputId] = useState('');
+  const [activeInvoiceId, setActiveInvoiceId] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [pelanggan, setPelanggan] = useState<PelangganInfo | null>(null);
@@ -57,9 +74,10 @@ export default function TagihanPage() {
   const [selectedQris, setSelectedQris] = useState<InvoiceItem | null>(null);
   const [showPrintStatement, setShowPrintStatement] = useState(false);
 
-  const handleCekTagihan = async (id: string) => {
-    if (!id.trim()) {
-      setErrorMsg('Silakan masukkan ID Wajib Retribusi terlebih dahulu');
+  const handleCekTagihan = async (idOrInvoice: string, targetInvoice?: string) => {
+    const cleanQuery = idOrInvoice.trim();
+    if (!cleanQuery) {
+      setErrorMsg('Silakan masukkan ID Wajib Retribusi atau No. Invoice terlebih dahulu');
       return;
     }
     setLoading(true);
@@ -68,7 +86,7 @@ export default function TagihanPage() {
     setTagihan([]);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/tagihan/public?id=${encodeURIComponent(id.trim())}`);
+      const res = await fetch(`${API_BASE_URL}/tagihan/public?id=${encodeURIComponent(cleanQuery)}`);
       if (res.ok) {
         const data = await res.json();
         if (data.pelanggan) {
@@ -83,8 +101,13 @@ export default function TagihanPage() {
             va: data.pelanggan.va,
           });
           setTagihan(data.tagihan || []);
+          if (targetInvoice) {
+            setActiveInvoiceId(targetInvoice);
+          } else if (data.matched_invoice) {
+            setActiveInvoiceId(data.matched_invoice);
+          }
         } else {
-          setErrorMsg(`ID Wajib Retribusi "${id}" tidak ditemukan dalam database.`);
+          setErrorMsg(`Data "${cleanQuery}" tidak ditemukan dalam database.`);
         }
       } else {
         setErrorMsg('Gagal terhubung ke server backend.');
@@ -96,6 +119,20 @@ export default function TagihanPage() {
     }
   };
 
+  // Auto-trigger search when page is opened via QR code scan (with ?id=... or ?invoice=...)
+  useEffect(() => {
+    if (queryInvoice) {
+      setActiveInvoiceId(queryInvoice);
+    }
+    if (queryId) {
+      setInputId(queryId);
+      handleCekTagihan(queryId, queryInvoice);
+    } else if (queryInvoice) {
+      setInputId(queryInvoice);
+      handleCekTagihan(queryInvoice, queryInvoice);
+    }
+  }, [queryId, queryInvoice]);
+
   const handlePrintStatement = () => {
     setShowPrintStatement(true);
     setTimeout(() => {
@@ -103,7 +140,16 @@ export default function TagihanPage() {
     }, 200);
   };
 
-  const yearsAvailable = (() => {
+  const targetedInvoice = useMemo(() => {
+    if (!activeInvoiceId || !tagihan.length) return null;
+    return (
+      tagihan.find(
+        (item) => item.invoice.toLowerCase().trim() === activeInvoiceId.toLowerCase().trim()
+      ) || null
+    );
+  }, [activeInvoiceId, tagihan]);
+
+  const yearsAvailable = useMemo(() => {
     const set = new Set<string>();
     const currentYr = new Date().getFullYear();
     for (let i = currentYr - 2; i <= currentYr + 5; i++) {
@@ -116,18 +162,20 @@ export default function TagihanPage() {
       }
     });
     return Array.from(set).sort().reverse();
-  })();
+  }, [tagihan]);
 
-  const filteredTagihan = tagihan
-    .filter((item) => (filterTahun ? item.bulan.includes(filterTahun) : true))
-    .sort((a, b) => {
-      const yearA = parseInt(a.bulan ? a.bulan.trim().split(' ').pop() || '0' : '0', 10);
-      const yearB = parseInt(b.bulan ? b.bulan.trim().split(' ').pop() || '0' : '0', 10);
-      if (yearA !== yearB) {
-        return yearA - yearB;
-      }
-      return getMonthNumber(a.bulan) - getMonthNumber(b.bulan);
-    });
+  const filteredTagihan = useMemo(() => {
+    return tagihan
+      .filter((item) => (filterTahun ? item.bulan.includes(filterTahun) : true))
+      .sort((a, b) => {
+        const yearA = parseInt(a.bulan ? a.bulan.trim().split(' ').pop() || '0' : '0', 10);
+        const yearB = parseInt(b.bulan ? b.bulan.trim().split(' ').pop() || '0' : '0', 10);
+        if (yearA !== yearB) {
+          return yearA - yearB;
+        }
+        return getMonthNumber(a.bulan) - getMonthNumber(b.bulan);
+      });
+  }, [tagihan, filterTahun]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-ink-50)]">
@@ -140,7 +188,8 @@ export default function TagihanPage() {
             Lihat Tagihan Retribusi
           </h1>
           <p className="text-sm text-[var(--color-ink-500)]">
-            Masukkan ID Wajib Retribusi Anda (Contoh: <span className="font-mono-id text-[var(--color-brand-deep)]">JGY0101001</span>)
+            Masukkan ID Wajib Retribusi atau No. Invoice Anda (Contoh:{' '}
+            <span className="font-mono-id text-[var(--color-brand-deep)]">JGY0101001</span>)
           </p>
         </div>
 
@@ -155,14 +204,14 @@ export default function TagihanPage() {
           >
             <div>
               <label className="block text-xs font-semibold text-[var(--color-ink-500)] uppercase tracking-wider mb-2">
-                ID Wajib Retribusi
+                ID Wajib Retribusi / No. Invoice
               </label>
               <div className="relative">
                 <input
                   type="text"
                   value={inputId}
                   onChange={(e) => setInputId(e.target.value)}
-                  placeholder="Ketik ID Wajib Retribusi..."
+                  placeholder="Ketik ID Wajib Retribusi atau No. Invoice..."
                   className="w-full px-4 py-3.5 pl-11 rounded-xl border border-[var(--color-ink-300)] font-mono-id text-base text-[var(--color-ink-900)] uppercase focus:outline-none focus:border-[var(--color-brand-mid)] focus:ring-2 focus:ring-[var(--color-brand-wash)] transition-all bg-[var(--color-ink-50)]"
                 />
                 <Search className="w-5 h-5 text-[var(--color-ink-500)] absolute left-3.5 top-4" />
@@ -179,7 +228,7 @@ export default function TagihanPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-[var(--color-brand-mid)] hover:bg-[var(--color-brand-deep)] text-white font-semibold text-sm transition-colors shadow-xs flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-xl bg-[var(--color-brand-mid)] hover:bg-[var(--color-brand-deep)] text-white font-semibold text-sm transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <span className="animate-pulse">Mencari Data...</span>
@@ -196,15 +245,79 @@ export default function TagihanPage() {
         {/* RESULTS SECTION */}
         {pelanggan && (
           <div className="space-y-6 animate-fadeIn">
+            {/* SCANNED INVOICE VERIFICATION BANNER */}
+            {targetedInvoice && (
+              <div
+                className={`p-6 rounded-2xl border-2 shadow-sm transition-all ${
+                  targetedInvoice.status === 'Lunas'
+                    ? 'bg-emerald-50/80 border-emerald-500/40 text-emerald-950'
+                    : 'bg-amber-50/80 border-amber-500/40 text-amber-950'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/80 border shadow-xs inline-flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                        Verifikasi QR Code Resmi
+                      </span>
+                      <span className="text-xs font-mono font-bold">
+                        {targetedInvoice.invoice}
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg font-black tracking-tight">
+                      Periode: {targetedInvoice.bulan} - Rp{' '}
+                      {targetedInvoice.nominal.toLocaleString('id-ID')}
+                    </h3>
+
+                    <p className="text-xs opacity-80">
+                      Wajib Retribusi: <strong>{pelanggan.nama}</strong> ({pelanggan.id_pelanggan})
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black tracking-wider ${
+                        targetedInvoice.status === 'Lunas'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-amber-600 text-white shadow-xs'
+                      }`}
+                    >
+                      {targetedInvoice.status === 'Lunas' ? (
+                        <CheckCircle2 className="w-4 h-4" />
+                      ) : (
+                        <XCircle className="w-4 h-4" />
+                      )}
+                      STATUS: {targetedInvoice.status.toUpperCase()}
+                    </span>
+
+                    {targetedInvoice.status !== 'Lunas' && (
+                      <button
+                        onClick={() => setSelectedQris(targetedInvoice)}
+                        className="px-4 py-1.5 rounded-xl bg-[var(--color-brand-mid)] hover:bg-[var(--color-brand-deep)] text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        Bayar QRIS
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Customer Details Card */}
             <div className="bg-white p-6 rounded-2xl border border-[var(--color-ink-100)] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <span className="text-xs font-semibold text-[var(--color-ink-500)] uppercase tracking-wider block">
                   Data Wajib Retribusi
                 </span>
-                <h3 className="text-lg font-bold text-[var(--color-ink-900)] mt-0.5">{pelanggan.nama}</h3>
+                <h3 className="text-lg font-bold text-[var(--color-ink-900)] mt-0.5">
+                  {pelanggan.nama}
+                </h3>
                 <p className="text-xs text-[var(--color-ink-700)] mt-1">
-                  {pelanggan.alamat} (RT {pelanggan.rt} / RW {pelanggan.rw}), Kel. {pelanggan.kelurahan}, Kec. {pelanggan.kecamatan}
+                  {pelanggan.alamat} (RT {pelanggan.rt} / RW {pelanggan.rw}), Kel.{' '}
+                  {pelanggan.kelurahan}, Kec. {pelanggan.kecamatan}
                 </p>
               </div>
 
@@ -222,7 +335,9 @@ export default function TagihanPage() {
             <div className="bg-white p-4 rounded-xl border border-[var(--color-ink-100)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <Filter className="w-4 h-4 text-[var(--color-ink-500)]" />
-                <label className="text-xs font-semibold text-[var(--color-ink-700)]">Filter Tahun:</label>
+                <label className="text-xs font-semibold text-[var(--color-ink-700)]">
+                  Filter Tahun:
+                </label>
                 <select
                   value={filterTahun}
                   onChange={(e) => setFilterTahun(e.target.value)}
@@ -239,7 +354,7 @@ export default function TagihanPage() {
 
               <button
                 onClick={handlePrintStatement}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--color-ink-300)] text-xs font-semibold text-[var(--color-ink-700)] hover:bg-[var(--color-ink-50)] transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[var(--color-ink-300)] text-xs font-semibold text-[var(--color-ink-700)] hover:bg-[var(--color-ink-50)] transition-colors cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 Cetak Tagihan
@@ -253,7 +368,7 @@ export default function TagihanPage() {
                   <thead className="bg-[var(--color-ink-50)] text-[var(--color-ink-500)] text-xs uppercase tracking-wider font-semibold border-b border-[var(--color-ink-100)]">
                     <tr>
                       <th className="p-4 text-center">QRIS</th>
-                      <th className="p-4">Nama</th>
+                      <th className="p-4">No. Invoice</th>
                       <th className="p-4">Bulan / Tahun</th>
                       <th className="p-4">Nominal</th>
                       <th className="p-4 text-center">Status</th>
@@ -262,20 +377,42 @@ export default function TagihanPage() {
                   <tbody className="divide-y divide-[var(--color-ink-100)] text-[var(--color-ink-700)]">
                     {filteredTagihan.map((item, idx) => {
                       const isLunas = item.status === 'Lunas';
+                      const isTargeted =
+                        activeInvoiceId &&
+                        item.invoice.toLowerCase().trim() === activeInvoiceId.toLowerCase().trim();
+
                       return (
-                        <tr key={idx} className="hover:bg-[var(--color-ink-50)] transition-colors">
+                        <tr
+                          key={idx}
+                          className={`transition-colors ${
+                            isTargeted
+                              ? 'bg-[var(--color-brand-wash)]/40 font-semibold'
+                              : 'hover:bg-[var(--color-ink-50)]'
+                          }`}
+                        >
                           <td className="p-4 text-center">
                             <button
                               onClick={() => setSelectedQris(item)}
                               title="Generate QRIS Dinamis"
-                              className="p-2 rounded-lg bg-[var(--color-brand-wash)] text-[var(--color-brand-mid)] hover:bg-[var(--color-brand-mid)] hover:text-white transition-colors"
+                              className="p-2 rounded-lg bg-[var(--color-brand-wash)] text-[var(--color-brand-mid)] hover:bg-[var(--color-brand-mid)] hover:text-white transition-colors cursor-pointer"
                             >
                               <QrCode className="w-4 h-4" />
                             </button>
                           </td>
-                          <td className="p-4 font-bold text-[var(--color-ink-900)]">{pelanggan.nama}</td>
+                          <td className="p-4 font-mono text-xs">
+                            <div className="flex items-center gap-1.5">
+                              <span>{item.invoice}</span>
+                              {isTargeted && (
+                                <span className="px-2 py-0.5 rounded text-[9px] font-black bg-[var(--color-brand-mid)] text-white tracking-wider">
+                                  SCAN QR
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="p-4 font-medium">{item.bulan}</td>
-                          <td className="p-4 font-semibold">Rp {item.nominal.toLocaleString('id-ID')}</td>
+                          <td className="p-4 font-semibold">
+                            Rp {item.nominal.toLocaleString('id-ID')}
+                          </td>
                           <td className="p-4 text-center">
                             <span
                               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
@@ -284,7 +421,11 @@ export default function TagihanPage() {
                                   : 'bg-[var(--color-danger-bg)] text-[var(--color-danger)] border border-[var(--color-danger)]/20'
                               }`}
                             >
-                              {isLunas ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                              {isLunas ? (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              ) : (
+                                <XCircle className="w-3.5 h-3.5" />
+                              )}
                               {item.status.toUpperCase()}
                             </span>
                           </td>
@@ -304,9 +445,15 @@ export default function TagihanPage() {
             <PhoneCall className="w-5 h-5" />
           </div>
           <div className="flex-1">
-            <h4 className="text-sm font-bold text-[var(--color-ink-900)]">Tidak Tahu ID Wajib Retribusi Anda?</h4>
+            <h4 className="text-sm font-bold text-[var(--color-ink-900)]">
+              Tidak Tahu ID Wajib Retribusi Anda?
+            </h4>
             <p className="text-xs text-[var(--color-ink-500)] mt-0.5">
-              Hubungi CS Dini (<span className="font-semibold text-[var(--color-ink-900)]">0812-3456-7890</span>) dengan menyertakan Nama lengkap, Kelurahan/Desa, Kecamatan, RT, dan RW.
+              Hubungi CS Dini (
+              <span className="font-semibold text-[var(--color-ink-900)]">
+                0812-3456-7890
+              </span>
+              ) dengan menyertakan Nama lengkap, Kelurahan/Desa, Kecamatan, RT, dan RW.
             </p>
           </div>
         </div>
@@ -328,7 +475,9 @@ export default function TagihanPage() {
           <div className="max-w-xl mx-auto p-8 border-2 border-slate-800 bg-white font-sans text-slate-800 space-y-6">
             <KopSurat subTitle="DINAS LINGKUNGAN HIDUP" />
             <div className="text-center pt-2 pb-1 border-b border-slate-300">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-800">Rincian Lembar Tagihan Retribusi Sampah</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                Rincian Lembar Tagihan Retribusi Sampah
+              </p>
             </div>
 
             <div className="space-y-2 text-xs">
@@ -342,11 +491,15 @@ export default function TagihanPage() {
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500">Alamat:</span>
-                <span>{pelanggan.alamat} (RT {pelanggan.rt} / RW {pelanggan.rw})</span>
+                <span>
+                  {pelanggan.alamat} (RT {pelanggan.rt} / RW {pelanggan.rw})
+                </span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-200">
                 <span className="text-slate-500">Kelurahan / Kecamatan:</span>
-                <span>Kel. {pelanggan.kelurahan}, Kec. {pelanggan.kecamatan}</span>
+                <span>
+                  Kel. {pelanggan.kelurahan}, Kec. {pelanggan.kecamatan}
+                </span>
               </div>
             </div>
 
@@ -362,7 +515,9 @@ export default function TagihanPage() {
                 {filteredTagihan.map((inv, i) => (
                   <tr key={i} className="border-b border-slate-200">
                     <td className="p-2 border-r border-slate-300 font-medium">{inv.bulan}</td>
-                    <td className="p-2 border-r border-slate-300 font-semibold">Rp {inv.nominal.toLocaleString('id-ID')}</td>
+                    <td className="p-2 border-r border-slate-300 font-semibold">
+                      Rp {inv.nominal.toLocaleString('id-ID')}
+                    </td>
                     <td className="p-2 font-bold uppercase">{inv.status}</td>
                   </tr>
                 ))}
@@ -370,9 +525,12 @@ export default function TagihanPage() {
             </table>
 
             <div className="pt-4 flex flex-col items-center justify-center space-y-2 text-center border-t border-slate-300">
-              <QRCodeSVG value={`${APP_DOMAIN.replace(/\/$/, '')}/tagihan?id=${encodeURIComponent(pelanggan.id_pelanggan)}`} size={100} level="M" />
+              <QRCodeSVG
+                value={`${APP_DOMAIN.replace(/\/$/, '')}/tagihan?id=${encodeURIComponent(pelanggan.id_pelanggan)}`}
+                size={100}
+                level="M"
+              />
               <p className="text-[10px] text-slate-500 max-w-xs">
-
                 Scan QR untuk cek status tagihan online resmi Dinas Lingkungan Hidup Kabupaten Lumajang.
               </p>
             </div>
@@ -384,3 +542,18 @@ export default function TagihanPage() {
     </div>
   );
 }
+
+export default function TagihanPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[var(--color-ink-50)] text-sm text-[var(--color-ink-500)]">
+          Memuat data tagihan...
+        </div>
+      }
+    >
+      <TagihanContent />
+    </Suspense>
+  );
+}
+

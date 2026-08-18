@@ -8,7 +8,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
 import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
 import { useToastConfirm } from '@/hooks/useToastConfirm';
-import { convertStaticToDynamicQris, DEFAULT_SHOPEEPAY_STATIC_QRIS } from '@/lib/qris';
+import { convertStaticToDynamicQris, DEFAULT_SHOPEEPAY_STATIC_QRIS, buildAspiQrisPayload } from '@/lib/qris';
+
 
 interface InvoiceRow {
   idInvoice: string;
@@ -828,10 +829,11 @@ export default function TagihanAdminPage() {
                 </div>
 
                 <QRCodeSVG
-                  value={`00020101021226670016ID.GOV.DLH.LUMAJANG011893600914000000000002155204939953033605405150005802ID5912DLH LUMAJANG6008LUMAJANG61056731162190715${payModalData.idInvoice}6304ABCD`}
+                  value={buildAspiQrisPayload(payModalData.idInvoice, payModalData.nominal)}
                   size={160}
                   level="H"
                 />
+
 
                 <p className="text-[11px] text-[var(--color-ink-500)] leading-tight max-w-xs">
                   Scan QRIS di atas menggunakan <span className="font-bold text-[var(--color-ink-900)]">Bank Jatim M-Banking, GoPay, OVO, ShopeePay, Dana, atau BCA</span>.

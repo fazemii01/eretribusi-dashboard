@@ -103,3 +103,17 @@ export function convertStaticToDynamicQris(
 
   return payloadForCrc + checksum;
 }
+
+/**
+ * Generate standard ASPI Dynamic QRIS with valid CRC-16 checksum
+ */
+export function buildAspiQrisPayload(invoiceId: string, amount: number): string {
+  const amountStr = Math.round(amount).toString();
+  const amtTag = `54${amountStr.length.toString().padStart(2, '0')}${amountStr}`;
+  const invTag = `07${invoiceId.length.toString().padStart(2, '0')}${invoiceId}`;
+  const additionalDataTag = `62${invTag.length.toString().padStart(2, '0')}${invTag}`;
+  const base = `00020101021226670016ID.GOV.DLH.LUMAJANG01189360091400000000000215520493995303360${amtTag}5802ID5912DLH LUMAJANG6008LUMAJANG610567311${additionalDataTag}6304`;
+  const checksum = calcCRC16(base);
+  return base + checksum;
+}
+
