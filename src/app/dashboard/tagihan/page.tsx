@@ -3,12 +3,12 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import ReceiptPrint from '@/components/admin/ReceiptPrint';
 import KopSurat from '@/components/admin/KopSurat';
-import { Search, Printer, DollarSign, CheckCircle2, XCircle, X, Zap, QrCode, CreditCard, User, Calendar, MapPin, Layers, ChevronLeft, ChevronRight, Camera, Upload, Image as ImageIcon, RotateCcw, Check, Sparkles } from 'lucide-react';
+import { Search, Printer, DollarSign, CheckCircle2, XCircle, X, Zap, QrCode, CreditCard, User, Calendar, MapPin, Layers, ChevronLeft, ChevronRight, Camera, Upload, Image as ImageIcon, RotateCcw, Check } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { API_BASE_URL, getAuthHeaders } from '@/lib/api';
 import ToastConfirmModal from '@/components/ui/ToastConfirmModal';
 import { useToastConfirm } from '@/hooks/useToastConfirm';
-import { convertStaticToDynamicQris, DEFAULT_SHOPEEPAY_STATIC_QRIS, buildAspiQrisPayload } from '@/lib/qris';
+import { buildAspiQrisPayload } from '@/lib/qris';
 
 
 interface InvoiceRow {
@@ -61,8 +61,7 @@ export default function TagihanAdminPage() {
 
   // Pay Modal States
   const [payModalData, setPayModalData] = useState<InvoiceRow | null>(null);
-  const [payMethod, setPayMethod] = useState<'tunai' | 'qris' | 'qris_shopeepay'>('tunai');
-  const [shopeePayStaticInput, setShopeePayStaticInput] = useState<string>(DEFAULT_SHOPEEPAY_STATIC_QRIS);
+  const [payMethod, setPayMethod] = useState<'tunai' | 'qris'>('tunai');
   const [buktiImage, setBuktiImage] = useState<string>('');
   const [officerName, setOfficerName] = useState<string>('Petugas Loket DLH');
   const [isProcessingPay, setIsProcessingPay] = useState(false);
@@ -651,7 +650,7 @@ export default function TagihanAdminPage() {
             </div>
 
             {/* Payment Method Selector Tabs */}
-            <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100 rounded-2xl">
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-gray-100 rounded-2xl">
               <button
                 type="button"
                 onClick={() => {
@@ -682,22 +681,6 @@ export default function TagihanAdminPage() {
               >
                 <QrCode className="w-3.5 h-3.5" />
                 QRIS (ASPI)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setPayMethod('qris_shopeepay');
-                  stopCamera();
-                }}
-                className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 ${
-                  payMethod === 'qris_shopeepay'
-                    ? 'bg-orange-500 text-white shadow-xs'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                ShopeePay (Test)
               </button>
             </div>
 
@@ -834,46 +817,8 @@ export default function TagihanAdminPage() {
                   level="H"
                 />
 
-
                 <p className="text-[11px] text-[var(--color-ink-500)] leading-tight max-w-xs">
                   Scan QRIS di atas menggunakan <span className="font-bold text-[var(--color-ink-900)]">Bank Jatim M-Banking, GoPay, OVO, ShopeePay, Dana, atau BCA</span>.
-                </p>
-              </div>
-            )}
-
-            {/* QRIS MODE (ShopeePay Minta Uang Test) */}
-            {payMethod === 'qris_shopeepay' && (
-              <div className="flex flex-col items-center justify-center p-4 bg-orange-50/60 rounded-2xl border-2 border-dashed border-orange-300 space-y-3 text-center">
-                <div className="px-3 py-1 rounded-full bg-orange-100 text-orange-800 text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-orange-600" /> Go-QRIS Test Mode (ShopeePay)
-                </div>
-
-                <div className="w-full text-left space-y-1">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-orange-900">
-                    Payload QRIS Statis ShopeePay
-                  </label>
-                  <input
-                    type="text"
-                    value={shopeePayStaticInput}
-                    onChange={(e) => setShopeePayStaticInput(e.target.value)}
-                    placeholder="Tempel payload 000201... ShopeePay di sini"
-                    className="w-full text-[10px] font-mono p-2 bg-white border border-orange-300 rounded-xl text-gray-800 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-xs"
-                  />
-                  <p className="text-[9px] text-orange-700">
-                    Sistem otomatis mengkonversi static ke dynamic nominal <strong>Rp {payModalData.nominal.toLocaleString('id-ID')}</strong>.
-                  </p>
-                </div>
-
-                <div className="bg-white p-3 rounded-2xl shadow-xs border border-orange-200 inline-block">
-                  <QRCodeSVG
-                    value={convertStaticToDynamicQris(shopeePayStaticInput, payModalData.nominal)}
-                    size={160}
-                    level="H"
-                  />
-                </div>
-
-                <p className="text-[11px] text-orange-900 leading-tight max-w-xs">
-                  Scan QRIS hasil injeksi Go-QRIS ini dengan aplikasi <span className="font-bold">Shopee, GoPay, OVO, Dana, atau Mobile Banking</span>.
                 </p>
               </div>
             )}

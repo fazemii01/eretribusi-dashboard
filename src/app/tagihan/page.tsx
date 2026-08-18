@@ -483,8 +483,25 @@ function TagihanContent() {
         <QrisModal
           invoiceId={selectedQris.invoice}
           nominal={selectedQris.nominal}
+          bulan={selectedQris.bulan}
+          pelanggan={
+            pelanggan
+              ? {
+                  idPelanggan: pelanggan.id_pelanggan,
+                  nama: pelanggan.nama,
+                  alamat: `${pelanggan.alamat} (RT ${pelanggan.rt} / RW ${pelanggan.rw}), Kel. ${pelanggan.kelurahan}, Kec. ${pelanggan.kecamatan}`,
+                }
+              : undefined
+          }
           qrisPayload={selectedQris.qris_payload}
           onClose={() => setSelectedQris(null)}
+          onPaymentSuccess={() => {
+            setTagihan((prev) =>
+              prev.map((item) =>
+                item.invoice === selectedQris.invoice ? { ...item, status: 'Lunas' } : item
+              )
+            );
+          }}
         />
       )}
 
