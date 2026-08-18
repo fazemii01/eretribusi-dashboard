@@ -75,7 +75,7 @@ function TagihanContent() {
   const [showPrintStatement, setShowPrintStatement] = useState(false);
 
   const handleCekTagihan = async (idOrInvoice: string, targetInvoice?: string) => {
-    const cleanQuery = idOrInvoice.trim();
+    const cleanQuery = (idOrInvoice || '').trim();
     if (!cleanQuery) {
       setErrorMsg('Silakan masukkan ID Wajib Retribusi atau No. Invoice terlebih dahulu');
       return;
@@ -110,10 +110,10 @@ function TagihanContent() {
           setErrorMsg(`Data "${cleanQuery}" tidak ditemukan dalam database.`);
         }
       } else {
-        setErrorMsg('Gagal terhubung ke server backend.');
+        setErrorMsg(`Server backend merespons error ${res.status}.`);
       }
-    } catch (err) {
-      setErrorMsg('Gagal terhubung ke server. Pastikan backend aktif.');
+    } catch (err: any) {
+      setErrorMsg(`Gagal memuat data (${err?.message || 'Koneksi error'}). Pastikan backend aktif.`);
     } finally {
       setLoading(false);
     }
@@ -121,17 +121,27 @@ function TagihanContent() {
 
   // Auto-trigger search when page is opened via QR code scan (with ?id=... or ?invoice=...)
   useEffect(() => {
-    if (queryInvoice) {
-      setActiveInvoiceId(queryInvoice);
+    let id = queryId;
+    let invoice = queryInvoice;
+
+    // Direct fallback from window.location if useSearchParams is delayed
+    if (!id && !invoice && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      id = urlParams.get('id') || '';
+      invoice = urlParams.get('invoice') || '';
     }
-    if (queryId) {
-      setInputId(queryId);
-      handleCekTagihan(queryId, queryInvoice);
-    } else if (queryInvoice) {
-      setInputId(queryInvoice);
-      handleCekTagihan(queryInvoice, queryInvoice);
+
+    if (invoice) {
+      setActiveInvoiceId(invoice);
+    }
+
+    const targetQuery = id || invoice;
+    if (targetQuery) {
+      setInputId(targetQuery);
+      handleCekTagihan(targetQuery, invoice);
     }
   }, [queryId, queryInvoice]);
+
 
   const handlePrintStatement = () => {
     setShowPrintStatement(true);

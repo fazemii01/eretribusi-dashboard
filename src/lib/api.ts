@@ -1,10 +1,15 @@
+// When running in the browser, always use relative '/api' unless a fully qualified remote URL is explicitly configured
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' ? '/api' : 'http://localhost:3000/api');
+  typeof window !== 'undefined'
+    ? (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.includes('localhost')
+        ? process.env.NEXT_PUBLIC_API_URL
+        : '/api')
+    : (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001/api');
 
 export const APP_DOMAIN =
   process.env.NEXT_PUBLIC_APP_DOMAIN ||
   (typeof window !== 'undefined' ? window.location.origin : 'https://dev.dlh.lumajangkab.go.id');
+
 
 export function getAuthHeaders(): HeadersInit {
   const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
